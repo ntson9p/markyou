@@ -34,12 +34,15 @@ import {
   Undo2,
 } from 'lucide-react';
 
+import { useRef } from 'react';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useRovingToolbar } from '@/lib/useRovingToolbar';
 import { cn } from '@/lib/utils';
 
 import {
@@ -98,6 +101,7 @@ function ToolbarButton({
       className={cn(
         'inline-flex size-8 items-center justify-center rounded-md text-sm transition-colors',
         'hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active && 'bg-accent text-accent-foreground',
       )}
     >
@@ -112,6 +116,9 @@ function Divider() {
 
 /** Fixed WYSIWYG toolbar (FR-5.2) with selection-state reflection. */
 export function WysiwygToolbar({ editor, state }: ToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useRovingToolbar(toolbarRef);
+
   function run<T>(key: CmdKey<T>, payload?: T) {
     editor?.action((ctx) => {
       ctx.get(commandsCtx).call(key, payload);
@@ -157,6 +164,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
 
   return (
     <div
+      ref={toolbarRef}
       role="toolbar"
       aria-label="Formatting"
       className={cn(
@@ -181,7 +189,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
           <button
             type="button"
             aria-label="Block type"
-            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
             data-testid="block-type-trigger"
           >
             {BLOCK_TYPE_LABELS[state.blockType]}
@@ -302,7 +310,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
           <button
             type="button"
             aria-label="More blocks"
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-40"
+            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
             data-testid="toolbar-more"
           >
             <MoreHorizontal className="size-4" />
