@@ -1,9 +1,15 @@
 import { useEffect } from 'react';
-import { FileText } from 'lucide-react';
 
+import { EditorArea } from '@/app/EditorArea';
+import { Notices } from '@/app/Notices';
 import { StatusBar } from '@/app/StatusBar';
 import { TopBar } from '@/app/TopBar';
 import { useUiStore, type EditorMode } from '@/app/store/ui';
+import { useDocStore } from '@/core/document/store';
+import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/features/files/actions';
+import { startDraftGuard } from '@/features/files/drafts';
+import { useFileDrop } from '@/features/files/useFileDrop';
+import { WelcomeScreen } from '@/features/files/WelcomeScreen';
 
 const MODE_SHORTCUTS: Record<string, EditorMode> = {
   Digit1: 'raw',
@@ -11,16 +17,34 @@ const MODE_SHORTCUTS: Record<string, EditorMode> = {
   Digit3: 'dual',
 };
 
-function useModeShortcuts() {
+function useGlobalShortcuts() {
   const setMode = useUiStore((s) => s.setMode);
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey) {
-        const mode = MODE_SHORTCUTS[e.code];
-        if (mode) {
-          e.preventDefault();
-          setMode(mode);
-        }
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+
+      // Mode switching: Ctrl+Shift+1/2/3 (FR-2.1)
+      if (e.shiftKey && !e.altKey && MODE_SHORTCUTS[e.code]) {
+        e.preventDefault();
+        setMode(MODE_SHORTCUTS[e.code]);
+        return;
+      }
+      // File lifecycle (§8.3)
+      if (e.code === 'KeyS' && !e.altKey) {
+        e.preventDefault();
+        if (e.shiftKey) void saveDocumentAs();
+        else void saveDocument();
+        return;
+      }
+      if (e.code === 'KeyO' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        void openDocument();
+        return;
+      }
+      if (e.code === 'KeyN' && e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        newDocument();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -28,34 +52,36 @@ function useModeShortcuts() {
   }, [setMode]);
 }
 
-function PanePlaceholder() {
-  const mode = useUiStore((s) => s.mode);
-  return (
-    <div className="flex h-full items-center justify-center bg-surface">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <FileText className="size-10 text-muted-foreground/50" aria-hidden />
-        <div>
-          <p className="text-sm font-medium">MarkYou</p>
-          <p className="text-sm text-muted-foreground">
-            Editor coming in the next milestones · current mode:{' '}
-            <span data-testid="active-mode">{mode}</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+/** FR-1.6: closing the tab with unsaved changes triggers the leave-warning. */
+function useLeaveWarning() {
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (useDocStore.getState().dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 }
 
 export function AppShell() {
-  useModeShortcuts();
+  const status = useDocStore((s) => s.status);
+
+  useGlobalShortcuts();
+  useLeaveWarning();
+  useFileDrop();
+  useEffect(() => startDraftGuard(), []);
 
   return (
     <div className="flex h-full flex-col">
       <TopBar />
       <main className="min-h-0 flex-1" aria-label="Editor area">
-        <PanePlaceholder />
+        {status === 'open' ? <EditorArea /> : <WelcomeScreen />}
       </main>
       <StatusBar />
+      <Notices />
     </div>
   );
 }

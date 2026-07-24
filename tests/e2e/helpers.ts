@@ -1,0 +1,61 @@
+import type { Page } from '@playwright/test';
+
+/**
+ * Stub the File System Access API with an in-page fake so save/open flows are
+ * deterministic and cross-browser (pickers cannot be automated). The fake
+ * "disk" lives on window.__fsaFiles: Record<name, content>.
+ */
+export async function stubFsa(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    const files: Record<string, string> = (w.__fsaFiles as Record<string, string>) ?? {};
+    w.__fsaFiles = files;
+
+    function makeHandle(name: string) {
+      return {
+        kind: 'file',
+        name,
+        queryPermission: async () => 'granted',
+        requestPermission: async () => 'granted',
+        isSameEntry: async () => false,
+        getFile: async () => ({
+          name,
+          text: async () => files[name] ?? '',
+        }),
+        createWritable: async () => ({
+          write: async (text: string) => {
+            files[name] = text;
+          },
+          close: async () => {},
+        }),
+      };
+    }
+    w.__makeFsaHandle = makeHandle;
+
+    w.showSaveFilePicker = async (opts?: { suggestedName?: string }) =>
+      makeHandle(opts?.suggestedName ?? 'untitled.md');
+    w.showOpenFilePicker = async () => {
+      const name = (w.__openFileName as string) ?? 'sample.md';
+      return [makeHandle(name)];
+    };
+  });
+}
+
+export async function getFakeDisk(page: Page): Promise<Record<string, string>> {
+  return page.evaluate(
+    () => (window as unknown as { __fsaFiles: Record<string, string> }).__fsaFiles,
+  );
+}
+
+export async function seedFakeFile(page: Page, name: string, content: string) {
+  await page.addInitScript(
+    ([n, c]) => {
+      const w = window as unknown as Record<string, unknown>;
+      const files: Record<string, string> = (w.__fsaFiles as Record<string, string>) ?? {};
+      files[n] = c;
+      w.__fsaFiles = files;
+      w.__openFileName = n;
+    },
+    [name, content] as const,
+  );
+}
