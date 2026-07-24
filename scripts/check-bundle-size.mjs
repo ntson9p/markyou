@@ -3,7 +3,7 @@
 // i.e. everything loaded before interaction) must be <= 350 KB.
 // Lazy chunks (KaTeX, Mermaid, CM languages) are excluded by construction:
 // they are dynamic imports and never appear in index.html.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,13 +13,31 @@ const BUDGET_BYTES = 350 * 1024;
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(root, 'dist');
 
-let html;
+let indexStat;
 try {
-  html = readFileSync(path.join(distDir, 'index.html'), 'utf8');
+  indexStat = statSync(path.join(distDir, 'index.html'));
 } catch {
   console.error('dist/index.html not found — run `npm run build` first.');
   process.exit(1);
 }
+
+// Guard against measuring a stale build: if any source file is newer than the
+// build output, the reported size is not what this code would ship.
+function newestMtime(dir) {
+  let newest = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const mtime = entry.isDirectory() ? newestMtime(full) : statSync(full).mtimeMs;
+    if (mtime > newest) newest = mtime;
+  }
+  return newest;
+}
+if (newestMtime(path.join(root, 'src')) > indexStat.mtimeMs) {
+  console.error('FAIL: dist/ is older than src/ — run `npm run build` first for an accurate size.');
+  process.exit(1);
+}
+
+const html = readFileSync(path.join(distDir, 'index.html'), 'utf8');
 
 const refs = new Set();
 for (const m of html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)) refs.add(m[1]);
