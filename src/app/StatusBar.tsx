@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { countText } from '@/core/document/counts';
 import { useDocStore } from '@/core/document/store';
+import { useEditorsStore } from '@/app/store/editors';
 import { useUiStore } from '@/app/store/ui';
 
 function useNow(intervalMs = 30_000): number {
@@ -29,9 +30,14 @@ export function StatusBar() {
   const lastSavedAt = useDocStore((s) => s.lastSavedAt);
   const cursor = useUiStore((s) => s.cursor);
   const mode = useUiStore((s) => s.mode);
+  const selectionText = useEditorsStore((s) => s.selectionText);
   const now = useNow();
 
   const counts = useMemo(() => countText(body), [body]);
+  const selectionCounts = useMemo(
+    () => (selectionText ? countText(selectionText) : null),
+    [selectionText],
+  );
 
   return (
     <footer
@@ -41,7 +47,16 @@ export function StatusBar() {
       {status === 'open' ? (
         <>
           <span data-testid="status-counts">
-            {counts.words.toLocaleString()} words · {counts.readingMinutes} min read
+            {selectionCounts ? (
+              <span data-testid="status-selection-counts">
+                {selectionCounts.words.toLocaleString()} words selected ·{' '}
+                {selectionCounts.characters.toLocaleString()} chars
+              </span>
+            ) : (
+              <>
+                {counts.words.toLocaleString()} words · {counts.readingMinutes} min read
+              </>
+            )}
           </span>
           <span className="flex-1" />
           {cursor && mode !== 'wysiwyg' && (

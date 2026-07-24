@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import type { Editor } from '@milkdown/kit/core';
-import type { EditorState } from '@milkdown/kit/prose/state';
 import { AlertTriangle } from 'lucide-react';
 
 import { useUiStore } from '@/app/store/ui';
@@ -10,11 +8,7 @@ import { useDocStore } from '@/core/document/store';
 import { RawEditor } from '@/editors/raw/RawEditor';
 import { WysiwygEditor } from '@/editors/wysiwyg/WysiwygEditor';
 import { WysiwygToolbar } from '@/editors/wysiwyg/Toolbar';
-import {
-  computeSelectionState,
-  INITIAL_SELECTION_STATE,
-  type WysiwygSelectionState,
-} from '@/editors/wysiwyg/selection-state';
+import { useWysiwygRegistration } from '@/editors/wysiwyg/useWysiwygRegistration';
 import { useDualScrollSync } from '@/features/scrollsync/useDualScrollSync';
 
 import '@/styles/wysiwyg.css';
@@ -49,22 +43,21 @@ export function DualMode() {
   const dualSplit = useUiStore((s) => s.dualSplit);
   const setDualSplit = useUiStore((s) => s.setDualSplit);
 
-  const [editor, setEditor] = useState<Editor | null>(null);
-  const [selectionState, setSelectionState] =
-    useState<WysiwygSelectionState>(INITIAL_SELECTION_STATE);
+  const { editor, selectionState, onEditorReady, onStateChange, registerScrollEl } =
+    useWysiwygRegistration();
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const handleStateChange = useCallback((state: EditorState) => {
-    setSelectionState((prev) => {
-      const next = computeSelectionState(state);
-      for (const key of Object.keys(next) as (keyof WysiwygSelectionState)[]) {
-        if (next[key] !== prev[key]) return next;
-      }
-      return prev;
-    });
-  }, []);
-
   const { setRawView, setWysiwygContainer } = useDualScrollSync();
+
+  // The right-pane scroll container feeds both the scroll-sync hook and the
+  // editors registry (outline jump / find target it).
+  const registerRightPane = useCallback(
+    (el: HTMLDivElement | null) => {
+      setWysiwygContainer(el);
+      registerScrollEl(el);
+    },
+    [setWysiwygContainer, registerScrollEl],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -77,7 +70,7 @@ export function DualMode() {
           left={<RawEditor onViewReady={setRawView} autoFocus={false} />}
           right={
             <div
-              ref={setWysiwygContainer}
+              ref={registerRightPane}
               className="relative h-full overflow-y-auto border-l bg-background motion-safe:scroll-smooth"
               data-testid="dual-wysiwyg-pane"
             >
@@ -85,8 +78,8 @@ export function DualMode() {
               <div className="mx-auto w-full max-w-[72ch] px-6 py-6">
                 <WysiwygEditor
                   key={docId}
-                  onEditorReady={setEditor}
-                  onStateChange={handleStateChange}
+                  onEditorReady={onEditorReady}
+                  onStateChange={onStateChange}
                   onParseError={setParseError}
                 />
               </div>

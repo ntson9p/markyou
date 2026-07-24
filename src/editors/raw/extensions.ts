@@ -53,6 +53,8 @@ export interface RawExtensionOptions {
   onUserChange: (text: string) => void;
   /** Called on selection movement with 1-based line / column. */
   onCursor?: (line: number, col: number) => void;
+  /** Called on selection change with the selected plain text ('' when collapsed). */
+  onSelectionText?: (text: string) => void;
 }
 
 export function buildRawExtensions(options: RawExtensionOptions): Extension[] {
@@ -93,10 +95,13 @@ export function buildRawExtensions(options: RawExtensionOptions): Extension[] {
         const isSync = update.transactions.some((tr) => tr.annotation(syncAnnotation));
         if (!isSync) options.onUserChange(update.state.doc.toString());
       }
-      if (options.onCursor && (update.selectionSet || update.docChanged)) {
-        const head = update.state.selection.main.head;
-        const line = update.state.doc.lineAt(head);
-        options.onCursor(line.number, head - line.from + 1);
+      if (update.selectionSet || update.docChanged) {
+        const { main } = update.state.selection;
+        if (options.onCursor) {
+          const line = update.state.doc.lineAt(main.head);
+          options.onCursor(line.number, main.head - line.from + 1);
+        }
+        options.onSelectionText?.(update.state.sliceDoc(main.from, main.to));
       }
     }),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown source editor' }),

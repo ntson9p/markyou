@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { EditorView } from '@codemirror/view';
 
 import { useDocStore } from '@/core/document/store';
-import { parseMarkdown } from '@/core/markdown/parse';
+import { topLevelBlockLines } from '@/core/markdown/blocks';
 
 /**
  * Best-effort dual-pane scroll sync (FR-6.3, plan §2.3): maps by **top-level
@@ -13,15 +13,6 @@ import { parseMarkdown } from '@/core/markdown/parse';
  */
 
 const LOCK_MS = 120;
-
-/** 1-based body start line of each top-level block (shared grammar). */
-function computeBlockStartLines(body: string): number[] {
-  const tree = parseMarkdown(body);
-  const lines = tree.children
-    .map((c) => c.position?.start.line ?? 1)
-    .filter((n) => Number.isFinite(n));
-  return lines.length > 0 ? lines : [1];
-}
 
 function frontmatterLineOffset(): number {
   const block = useDocStore.getState().frontmatter.rawBlock;
@@ -44,7 +35,7 @@ export function useDualScrollSync() {
   useEffect(() => useDocStore.subscribe((s, p) => s.body !== p.body && invalidate()), [invalidate]);
 
   const blockLines = useCallback((): number[] => {
-    blockLinesRef.current ??= computeBlockStartLines(useDocStore.getState().body);
+    blockLinesRef.current ??= topLevelBlockLines(useDocStore.getState().body);
     return blockLinesRef.current;
   }, []);
 

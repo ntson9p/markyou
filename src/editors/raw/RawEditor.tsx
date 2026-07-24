@@ -10,6 +10,7 @@ import {
   syncAnnotation,
 } from '@/editors/raw/extensions';
 import { useSettingsStore } from '@/features/settings/store';
+import { useEditorsStore } from '@/app/store/editors';
 import { useUiStore } from '@/app/store/ui';
 
 interface RawEditorProps {
@@ -39,10 +40,12 @@ export function RawEditor({ onViewReady, autoFocus = true }: RawEditorProps) {
         lineNumbers: useSettingsStore.getState().lineNumbers,
         onUserChange: (text) => useDocStore.getState().setFullText(text, 'raw'),
         onCursor: (line, col) => useUiStore.getState().setCursor({ line, col }),
+        onSelectionText: (text) => useEditorsStore.getState().setSelectionText(text),
       }),
     });
     const view = new EditorView({ state, parent: containerRef.current });
     viewRef.current = view;
+    useEditorsStore.getState().setCmView(view);
     onViewReady?.(view);
 
     // Store → raw: apply external versions as a minimal diff (plan §2.2).
@@ -62,6 +65,9 @@ export function RawEditor({ onViewReady, autoFocus = true }: RawEditorProps) {
     return () => {
       unsubscribe();
       onViewReady?.(null);
+      const editors = useEditorsStore.getState();
+      if (editors.cmView === view) editors.setCmView(null);
+      editors.setSelectionText('');
       view.destroy();
       viewRef.current = null;
       useUiStore.getState().setCursor(null);

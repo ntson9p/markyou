@@ -13,6 +13,10 @@ interface UiState {
   rawPreviewVisible: boolean;
   toggleRawPreview: () => void;
 
+  /** Outline sidebar visibility (FR-10.1, Ctrl+Shift+O). */
+  outlineVisible: boolean;
+  toggleOutline: () => void;
+
   /** Persisted splitter ratios (FR-2.3/FR-2.4). */
   rawSplit: number;
   setRawSplit: (ratio: number) => void;
@@ -33,6 +37,9 @@ export const useUiStore = create<UiState>()(
       rawPreviewVisible: true,
       toggleRawPreview: () => set((s) => ({ rawPreviewVisible: !s.rawPreviewVisible })),
 
+      outlineVisible: false,
+      toggleOutline: () => set((s) => ({ outlineVisible: !s.outlineVisible })),
+
       rawSplit: 0.5,
       setRawSplit: (rawSplit) => set({ rawSplit }),
       dualSplit: 0.5,
@@ -46,6 +53,7 @@ export const useUiStore = create<UiState>()(
       partialize: (state) => ({
         mode: state.mode,
         rawPreviewVisible: state.rawPreviewVisible,
+        outlineVisible: state.outlineVisible,
         rawSplit: state.rawSplit,
         dualSplit: state.dualSplit,
       }),

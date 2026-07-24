@@ -1,4 +1,4 @@
-import { Columns2 } from 'lucide-react';
+import { Columns2, PanelLeft } from 'lucide-react';
 
 import { MainMenu } from '@/app/MainMenu';
 import { ModeSwitcher } from '@/app/ModeSwitcher';
@@ -14,10 +14,25 @@ export function TopBar() {
   const mode = useUiStore((s) => s.mode);
   const previewVisible = useUiStore((s) => s.rawPreviewVisible);
   const togglePreview = useUiStore((s) => s.toggleRawPreview);
+  const outlineVisible = useUiStore((s) => s.outlineVisible);
+  const toggleOutline = useUiStore((s) => s.toggleOutline);
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2">
       <MainMenu />
+      {status === 'open' && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={outlineVisible ? 'Hide outline' : 'Show outline'}
+          aria-pressed={outlineVisible}
+          title="Toggle outline (Ctrl+Shift+O)"
+          onClick={toggleOutline}
+          data-testid="outline-toggle"
+        >
+          <PanelLeft className={outlineVisible ? 'size-4' : 'size-4 opacity-50'} />
+        </Button>
+      )}
       <div className="flex min-w-0 items-center gap-1.5">
         <span className="truncate text-sm font-medium" data-testid="doc-title">
           {status === 'open' ? (fileName ?? 'Untitled') : 'MarkYou'}

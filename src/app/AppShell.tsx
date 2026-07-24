@@ -10,6 +10,7 @@ import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/featu
 import { startDraftGuard } from '@/features/files/drafts';
 import { useFileDrop } from '@/features/files/useFileDrop';
 import { WelcomeScreen } from '@/features/files/WelcomeScreen';
+import { Outline } from '@/features/outline/Outline';
 
 const MODE_SHORTCUTS: Record<string, EditorMode> = {
   Digit1: 'raw',
@@ -34,6 +35,12 @@ function useGlobalShortcuts() {
       if (e.code === 'KeyP' && e.shiftKey && !e.altKey) {
         e.preventDefault();
         useUiStore.getState().toggleRawPreview();
+        return;
+      }
+      // Toggle outline sidebar (FR-10.1)
+      if (e.code === 'KeyO' && e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        useUiStore.getState().toggleOutline();
         return;
       }
       // File lifecycle (§8.3)
@@ -74,6 +81,7 @@ function useLeaveWarning() {
 
 export function AppShell() {
   const status = useDocStore((s) => s.status);
+  const outlineVisible = useUiStore((s) => s.outlineVisible);
 
   useGlobalShortcuts();
   useLeaveWarning();
@@ -83,8 +91,17 @@ export function AppShell() {
   return (
     <div className="flex h-full flex-col">
       <TopBar />
-      <main className="min-h-0 flex-1" aria-label="Editor area">
-        {status === 'open' ? <EditorArea /> : <WelcomeScreen />}
+      <main className="flex min-h-0 flex-1" aria-label="Editor area">
+        {status === 'open' ? (
+          <>
+            {outlineVisible && <Outline />}
+            <div className="min-h-0 flex-1">
+              <EditorArea />
+            </div>
+          </>
+        ) : (
+          <WelcomeScreen />
+        )}
       </main>
       <StatusBar />
       <Notices />
