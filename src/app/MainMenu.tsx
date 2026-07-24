@@ -73,7 +73,7 @@ export function MainMenu() {
           Save As… <DropdownMenuShortcut>Ctrl+Shift+S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled onSelect={() => setActivePanel('export')}>
+        <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('export')}>
           Export…
         </DropdownMenuItem>
         <DropdownMenuItem disabled onSelect={() => setActivePanel('history')}>

@@ -10,6 +10,7 @@ import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/featu
 import { startDraftGuard } from '@/features/files/drafts';
 import { useFileDrop } from '@/features/files/useFileDrop';
 import { WelcomeScreen } from '@/features/files/WelcomeScreen';
+import { ExportPanel } from '@/features/export/ExportPanel';
 import { MetadataPanel } from '@/features/metadata/MetadataPanel';
 import { Outline } from '@/features/outline/Outline';
 
@@ -107,6 +108,7 @@ export function AppShell() {
       <StatusBar />
       <Notices />
       <MetadataPanel />
+      <ExportPanel />
     </div>
   );
 }
