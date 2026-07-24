@@ -1,4 +1,5 @@
 import { useDocStore } from '@/core/document/store';
+import { FindBar, useWysiwygFind } from '@/editors/wysiwyg/FindBar';
 import { WysiwygToolbar } from '@/editors/wysiwyg/Toolbar';
 import { WysiwygEditor } from '@/editors/wysiwyg/WysiwygEditor';
 import { useWysiwygRegistration } from '@/editors/wysiwyg/useWysiwygRegistration';
@@ -13,10 +14,14 @@ export function WysiwygMode() {
   const docId = useDocStore((s) => s.docId);
   const { editor, selectionState, onEditorReady, onStateChange, registerScrollEl } =
     useWysiwygRegistration();
+  const find = useWysiwygFind(() => true);
 
   return (
     <div className="flex h-full flex-col">
       <WysiwygToolbar editor={editor} state={selectionState} />
+      {find.open && editor && (
+        <FindBar editor={editor} initialReplace={find.withReplace} onClose={find.close} />
+      )}
       <div
         ref={registerScrollEl}
         className="min-h-0 flex-1 overflow-y-auto bg-muted/30 motion-safe:scroll-smooth"

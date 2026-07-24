@@ -45,6 +45,7 @@ import { wysiwygRemarkPlugins } from './plugins/remark-plugins';
 import { wysiwygKeymap } from './shortcuts';
 import { blockDropCursor, configureBlockHandle } from './plugins/block-handle';
 import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
+import { findPlugin } from './plugins/find';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { calloutView } from './views/callout-view';
@@ -214,6 +215,7 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(block)
       .use(blockDropCursor)
       .use(placeholderPlugin)
+      .use(findPlugin)
       .use(listener)
       .use(statePlugin)
       .create()

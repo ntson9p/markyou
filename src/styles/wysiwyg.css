@@ -569,6 +569,18 @@ body > div[data-show] .link-preview,
   padding-left: 0.5rem;
 }
 
+/* ---------- find & replace matches (FR-9) ---------- */
+
+.wysiwyg-root .ProseMirror .pm-find-match {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  border-radius: 2px;
+}
+
+.wysiwyg-root .ProseMirror .pm-find-active {
+  background: color-mix(in oklab, var(--primary) 45%, transparent);
+  outline: 1px solid var(--primary);
+}
+
 /* ---------- empty-document placeholder (M4) ---------- */
 
 .wysiwyg-root .ProseMirror .is-empty::before {

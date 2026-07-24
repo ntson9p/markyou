@@ -6,6 +6,7 @@ import { useUiStore } from '@/app/store/ui';
 import { SplitPane } from '@/components/SplitPane';
 import { useDocStore } from '@/core/document/store';
 import { RawEditor } from '@/editors/raw/RawEditor';
+import { FindBar, useWysiwygFind } from '@/editors/wysiwyg/FindBar';
 import { WysiwygEditor } from '@/editors/wysiwyg/WysiwygEditor';
 import { WysiwygToolbar } from '@/editors/wysiwyg/Toolbar';
 import { useWysiwygRegistration } from '@/editors/wysiwyg/useWysiwygRegistration';
@@ -46,6 +47,9 @@ export function DualMode() {
   const { editor, selectionState, onEditorReady, onStateChange, registerScrollEl } =
     useWysiwygRegistration();
   const [parseError, setParseError] = useState<string | null>(null);
+  // Ctrl+F targets the WYSIWYG pane only when it's focused; otherwise
+  // CodeMirror's own search handles the source pane.
+  const find = useWysiwygFind(() => document.activeElement?.closest('.ProseMirror') != null);
 
   const { setRawView, setWysiwygContainer } = useDualScrollSync();
 
@@ -74,6 +78,11 @@ export function DualMode() {
               className="relative h-full overflow-y-auto border-l bg-background motion-safe:scroll-smooth"
               data-testid="dual-wysiwyg-pane"
             >
+              {find.open && editor && (
+                <div className="sticky top-0 z-20">
+                  <FindBar editor={editor} initialReplace={find.withReplace} onClose={find.close} />
+                </div>
+              )}
               {parseError && <ParseErrorBanner message={parseError} />}
               <div className="mx-auto w-full max-w-[72ch] px-6 py-6">
                 <WysiwygEditor
