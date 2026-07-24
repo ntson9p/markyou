@@ -7,7 +7,10 @@ import { useDocStore } from '@/core/document/store';
 
 describe('AppShell', () => {
   beforeEach(() => {
-    useUiStore.setState({ mode: 'wysiwyg' });
+    // Shell-level assertions (dirty dot, counts, frontmatter split) use the
+    // plain textarea still backing dual mode until M5 — real editor engines
+    // have their own suites.
+    useUiStore.setState({ mode: 'dual' });
     useDocStore.getState().closeDocument();
   });
 

@@ -1,6 +1,13 @@
+import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { languages } from '@codemirror/language-data';
+import { codeBlockComponent, codeBlockConfig } from '@milkdown/kit/component/code-block';
+import { configureLinkTooltip, linkTooltipPlugin } from '@milkdown/kit/component/link-tooltip';
+import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block';
+import { tableBlock } from '@milkdown/kit/component/table-block';
 import {
   defaultValueCtx,
   Editor,
+  editorViewCtx,
   editorViewOptionsCtx,
   remarkStringifyOptionsCtx,
   rootCtx,
@@ -14,6 +21,9 @@ import * as commonmarkExports from '@milkdown/kit/preset/commonmark';
 import { commonmark, remarkInlineLinkPlugin } from '@milkdown/kit/preset/commonmark';
 import { gfm } from '@milkdown/kit/preset/gfm';
 import type { Node as ProseNode } from '@milkdown/kit/prose/model';
+import { Plugin } from '@milkdown/kit/prose/state';
+import type { EditorState } from '@milkdown/kit/prose/state';
+import { $prose } from '@milkdown/kit/utils';
 
 import {
   DEFAULT_STYLE_PREFS,
@@ -21,6 +31,8 @@ import {
   type MarkdownStylePrefs,
 } from '@/core/markdown/style';
 
+import { wysiwygCommands } from './commands';
+import { wysiwygInputRules } from './input-rules';
 import { calloutMarkerHandler, calloutNodes } from './nodes/callout';
 import { definitionNodes } from './nodes/definition';
 import { diagramNodes } from './nodes/diagram';
@@ -29,6 +41,12 @@ import { mathNodes } from './nodes/math';
 import { listSpreadFixes } from './plugins/list-spread-fix';
 import { remarkReferencesPlugin } from './plugins/references';
 import { wysiwygRemarkPlugins } from './plugins/remark-plugins';
+import { wysiwygKeymap } from './shortcuts';
+import { calloutView } from './views/callout-view';
+import { definitionView } from './views/definition-view';
+import { diagramView } from './views/diagram-view';
+import { htmlViews } from './views/html-views';
+import { mathViews } from './views/math-views';
 
 /**
  * Exported at runtime but missing from the package typings.
@@ -65,8 +83,13 @@ export interface CreateWysiwygEditorOptions {
   stylePrefs?: MarkdownStylePrefs;
   /** Reactive editable flag; defaults to always-editable. */
   editable?: () => boolean;
-  /** Fires on every user-driven markdown change (undebounced — adapters debounce). */
+  /**
+   * Fires on every user-driven markdown change (undebounced — adapters
+   * debounce). Output is already normalized (empty doc → empty string).
+   */
   onMarkdownUpdated?: (markdown: string) => void;
+  /** Fires on every editor state change — drives toolbar selection reflection (FR-5.2). */
+  onStateChange?: (state: EditorState) => void;
 }
 
 /**
@@ -111,35 +134,72 @@ export function wysiwygStringifyOptions(prefs: MarkdownStylePrefs) {
 export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promise<Editor> {
   const prefs = options.stylePrefs ?? DEFAULT_STYLE_PREFS;
 
-  return Editor.make()
-    .config((ctx) => {
-      ctx.set(rootCtx, options.root);
-      ctx.set(defaultValueCtx, options.defaultValue ?? '');
-      ctx.set(remarkStringifyOptionsCtx, wysiwygStringifyOptions(prefs));
-      if (options.editable) {
-        ctx.update(editorViewOptionsCtx, (prev) => ({ ...prev, editable: options.editable }));
-      }
-      if (options.onMarkdownUpdated) {
-        const on = options.onMarkdownUpdated;
-        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, prevMarkdown) => {
-          if (markdown !== prevMarkdown) on(markdown);
-        });
-      }
-    })
-    .use(wysiwygRemarkPlugins)
-    .use(remarkReferencesPlugin)
-    .use(commonmarkPreset)
-    .use(gfm)
-    .use(listSpreadFixes)
-    .use(calloutNodes)
-    .use(diagramNodes)
-    .use(htmlBlockNodes)
-    .use(mathNodes)
-    .use(definitionNodes)
-    .use(history)
-    .use(clipboard)
-    .use(cursor)
-    .use(indent)
-    .use(listener)
-    .create();
+  const statePlugin = $prose(() => {
+    return new Plugin({
+      view: (view) => {
+        options.onStateChange?.(view.state);
+        return {
+          update: (v) => options.onStateChange?.(v.state),
+        };
+      },
+    });
+  });
+
+  return (
+    Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, options.root);
+        ctx.set(defaultValueCtx, options.defaultValue ?? '');
+        ctx.set(remarkStringifyOptionsCtx, wysiwygStringifyOptions(prefs));
+        if (options.editable) {
+          ctx.update(editorViewOptionsCtx, (prev) => ({ ...prev, editable: options.editable }));
+        }
+        if (options.onMarkdownUpdated) {
+          const on = options.onMarkdownUpdated;
+          ctx.get(listenerCtx).markdownUpdated((innerCtx, markdown, prevMarkdown) => {
+            if (markdown === prevMarkdown) return;
+            const view = innerCtx.get(editorViewCtx);
+            on(normalizeSerialized(view.state.doc, markdown));
+          });
+        }
+        // Code blocks: CodeMirror-backed editing with a language picker
+        // (FR-5.1) — reuses the CM languages already shipped for raw mode.
+        ctx.update(codeBlockConfig.key, (prev) => ({
+          ...prev,
+          languages,
+          extensions: [syntaxHighlighting(defaultHighlightStyle, { fallback: true })],
+        }));
+        configureLinkTooltip(ctx);
+      })
+      // Our keymap registers before the presets so §9.3 bindings win.
+      .use(wysiwygKeymap)
+      .use(wysiwygRemarkPlugins)
+      .use(remarkReferencesPlugin)
+      .use(commonmarkPreset)
+      .use(gfm)
+      .use(listSpreadFixes)
+      .use(calloutNodes)
+      .use(diagramNodes)
+      .use(htmlBlockNodes)
+      .use(mathNodes)
+      .use(definitionNodes)
+      .use(wysiwygCommands.flat())
+      .use(wysiwygInputRules)
+      .use(calloutView)
+      .use(diagramView)
+      .use(htmlViews)
+      .use(mathViews)
+      .use(definitionView)
+      .use(codeBlockComponent)
+      .use(linkTooltipPlugin)
+      .use(tableBlock)
+      .use(listItemBlockComponent)
+      .use(history)
+      .use(clipboard)
+      .use(cursor)
+      .use(indent)
+      .use(listener)
+      .use(statePlugin)
+      .create()
+  );
 }

@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-import { getFakeDisk, seedFakeFile, stubFsa } from './helpers';
+import { getFakeDisk, pinMode, seedFakeFile, stubFsa } from './helpers';
 
 test.describe('document lifecycle (FR-1)', () => {
+  // File flows are editor-agnostic; drive them through dual mode's
+  // placeholder textarea (real dual panes land in M5).
+  test.beforeEach(async ({ page }) => {
+    await pinMode(page, 'dual');
+  });
+
   test('new document, typing, dirty indicator', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
@@ -22,6 +28,7 @@ test.describe('document lifecycle (FR-1)', () => {
     context,
   }) => {
     const page = await context.newPage();
+    await pinMode(page, 'dual');
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
 
@@ -34,6 +41,7 @@ test.describe('document lifecycle (FR-1)', () => {
     await page.close({ runBeforeUnload: false });
 
     const reopened = await context.newPage();
+    await pinMode(reopened, 'dual');
     await reopened.goto('/');
     await expect(reopened.getByTestId('recovery-banner')).toBeVisible();
 
@@ -48,6 +56,7 @@ test.describe('document lifecycle (FR-1)', () => {
 
   test('discarding a recovery draft leaves a clean welcome screen', async ({ context }) => {
     const page = await context.newPage();
+    await pinMode(page, 'dual');
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
     await page.getByTestId('editor-textarea').fill('throwaway');
@@ -83,6 +92,7 @@ test.describe('document lifecycle (FR-1)', () => {
 
   test('a clean save leaves no recovery draft behind', async ({ context }) => {
     const page = await context.newPage();
+    await pinMode(page, 'dual');
     await stubFsa(page);
     await page.goto('/');
     await page.getByTestId('welcome-new').click();

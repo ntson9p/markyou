@@ -7,6 +7,9 @@ import { TextareaEditor } from '@/editors/placeholder/TextareaEditor';
 // Editor engines are lazy chunks (initial-JS budget §7); the service worker
 // precaches them, so offline use and mode switches stay instant.
 const RawMode = lazy(() => import('@/app/RawMode').then((m) => ({ default: m.RawMode })));
+const WysiwygMode = lazy(() =>
+  import('@/app/WysiwygMode').then((m) => ({ default: m.WysiwygMode })),
+);
 
 function PaneLoader() {
   return (
@@ -17,8 +20,8 @@ function PaneLoader() {
 }
 
 /**
- * The pane region, switched by mode (FR-2.1). WYSIWYG arrives in M3 and the
- * dual splitter in M5 — both currently fall back to the placeholder editor.
+ * The pane region, switched by mode (FR-2.1). The dual splitter lands in M5
+ * and currently falls back to the placeholder editor.
  */
 export function EditorArea() {
   const mode = useUiStore((s) => s.mode);
@@ -31,11 +34,18 @@ export function EditorArea() {
     );
   }
 
+  if (mode === 'wysiwyg') {
+    return (
+      <Suspense fallback={<PaneLoader />}>
+        <WysiwygMode />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b bg-muted/40 px-4 py-1 text-center text-xs text-muted-foreground">
-        {mode === 'wysiwyg' ? 'WYSIWYG mode lands in M3' : 'Dual mode lands in M5'} — placeholder
-        editor below
+        Dual mode lands in M5 — placeholder editor below
       </div>
       <div className="min-h-0 flex-1">
         <TextareaEditor />

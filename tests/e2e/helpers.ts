@@ -1,6 +1,24 @@
 import type { Page } from '@playwright/test';
 
 /**
+ * Pin the persisted editor mode before the app boots (zustand persist shape).
+ * Lifecycle specs pin 'dual' — its placeholder textarea survives until M5 and
+ * keeps file-flow assertions editor-agnostic.
+ */
+export async function pinMode(page: Page, mode: 'raw' | 'wysiwyg' | 'dual') {
+  await page.addInitScript((m) => {
+    // Init scripts re-run on reload; only seed once so in-app mode changes
+    // (and their persistence) still win afterwards.
+    if (window.localStorage.getItem('__pinModeApplied')) return;
+    window.localStorage.setItem('__pinModeApplied', '1');
+    const raw = window.localStorage.getItem('markyou.ui');
+    const persisted = raw ? (JSON.parse(raw) as { state: Record<string, unknown> }) : { state: {} };
+    persisted.state = { ...persisted.state, mode: m };
+    window.localStorage.setItem('markyou.ui', JSON.stringify({ version: 0, ...persisted }));
+  }, mode);
+}
+
+/**
  * Stub the File System Access API with an in-page fake so save/open flows are
  * deterministic and cross-browser (pickers cannot be automated). The fake
  * "disk" lives on window.__fsaFiles: Record<name, content>.
