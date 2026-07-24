@@ -38,7 +38,7 @@ export function WysiwygMode() {
   return (
     <div className="flex h-full flex-col">
       <WysiwygToolbar editor={editor} state={selectionState} />
-      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/30">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/30 motion-safe:scroll-smooth">
         <div className="mx-auto my-8 min-h-[70%] w-full max-w-[min(72ch,calc(100%-2rem))] rounded-lg border border-border/60 bg-background px-10 py-12 shadow-sm">
           <WysiwygEditor key={docId} onEditorReady={setEditor} onStateChange={handleStateChange} />
         </div>

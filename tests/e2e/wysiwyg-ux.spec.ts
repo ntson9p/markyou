@@ -1,0 +1,114 @@
+import { expect, test, type Page } from '@playwright/test';
+
+/** M4 WYSIWYG UX polish: bubble menu (FR-5.4), slash menu (FR-5.5),
+ *  block handles + insert-below (FR-5.6), empty-doc placeholder. */
+
+const editor = (page: Page) => page.locator('.ProseMirror');
+
+async function newWysiwygDoc(page: Page) {
+  await page.goto('/');
+  await page.getByTestId('welcome-new').click();
+  // Generous timeout: the WYSIWYG engine is a lazy chunk that the dev server
+  // cold-compiles on first navigation under parallel load.
+  await expect(editor(page)).toBeVisible({ timeout: 30000 });
+  await editor(page).click();
+}
+
+test.describe('WYSIWYG UX polish (M4)', () => {
+  test('empty document shows a placeholder prompt', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await expect(editor(page).locator('.is-empty')).toHaveAttribute('data-placeholder', /Type/);
+    // Placeholder disappears once the block has content.
+    await page.keyboard.type('written');
+    await expect(editor(page).locator('.is-empty')).toHaveCount(0);
+  });
+
+  test('bubble menu formats a selection and reflects state (FR-5.4)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('format me please');
+    // Select the line as a TextSelection (Ctrl+A yields an AllSelection, which
+    // the bubble intentionally ignores).
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Shift+End');
+
+    const bubble = page.locator('.milkdown-bubble-menu');
+    await expect(bubble).toHaveAttribute('data-show', 'true');
+
+    const bold = bubble.getByLabel('Bold (Ctrl+B)');
+    await expect(bold).toHaveAttribute('aria-pressed', 'false');
+    await bold.click();
+    await expect(editor(page).locator('strong')).toHaveText('format me please');
+    await expect(bold).toHaveAttribute('aria-pressed', 'true');
+
+    // Turn-into converts the enclosing block.
+    await bubble.locator('.bubble-turn-into').selectOption('h2');
+    await expect(editor(page).locator('h2')).toContainText('format me please');
+  });
+
+  test('bubble menu is hidden without a selection', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('no selection here');
+    await expect(page.locator('.milkdown-bubble-menu')).toHaveAttribute('data-show', 'false');
+  });
+
+  test('slash menu filters and inserts by keyboard (FR-5.5)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('/');
+
+    const slash = page.locator('.milkdown-slash-menu');
+    await expect(slash).toHaveAttribute('data-show', 'true');
+    await expect(slash.locator('.slash-item')).toHaveCount(14);
+
+    // Filter narrows to the three headings.
+    await page.keyboard.type('head');
+    await expect(slash.locator('.slash-item')).toHaveCount(3);
+    await expect(slash.locator('.slash-item').first()).toContainText('Heading 1');
+
+    // Arrow-down selects Heading 2, Enter inserts it (removing the "/head" text).
+    await page.keyboard.press('ArrowDown');
+    await expect(slash.locator('.slash-item.active')).toContainText('Heading 2');
+    await page.keyboard.press('Enter');
+    await expect(slash).toHaveAttribute('data-show', 'false');
+
+    await page.keyboard.type('My Heading');
+    await expect(editor(page).locator('h2')).toHaveText('My Heading');
+    await expect(editor(page)).not.toContainText('/head');
+  });
+
+  test('slash menu inserts by click and closes on Escape (FR-5.5)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('/table');
+    const slash = page.locator('.milkdown-slash-menu');
+    await expect(slash.locator('.slash-item')).toHaveCount(1);
+    await slash.locator('.slash-item', { hasText: 'Table' }).click();
+    await expect(editor(page).locator('table.children')).toBeVisible();
+
+    // Escape dismisses the menu without inserting.
+    await editor(page).click();
+    await page.keyboard.press('End');
+    await page.keyboard.type('/quote');
+    await expect(slash).toHaveAttribute('data-show', 'true');
+    await page.keyboard.press('Escape');
+    await expect(slash).toHaveAttribute('data-show', 'false');
+    await expect(editor(page).locator('blockquote')).toHaveCount(0);
+  });
+
+  test('block handle appears on hover and inserts a block below (FR-5.6)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('First block');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Second block');
+
+    await editor(page).locator('p', { hasText: 'First block' }).hover();
+    const handle = page.locator('.milkdown-block-handle');
+    await expect(handle).toHaveAttribute('data-show', 'true');
+    // The handle is draggable — reordering is powered by the block plugin.
+    await expect(handle).toHaveAttribute('draggable', 'true');
+
+    await handle.locator('.block-handle-add').click();
+    await page.keyboard.type('Inserted');
+
+    const texts = await editor(page).locator('p').allInnerTexts();
+    expect(texts).toEqual(['First block', 'Inserted', 'Second block']);
+  });
+});

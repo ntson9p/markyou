@@ -12,6 +12,7 @@ import {
   remarkStringifyOptionsCtx,
   rootCtx,
 } from '@milkdown/kit/core';
+import { block } from '@milkdown/kit/plugin/block';
 import { clipboard } from '@milkdown/kit/plugin/clipboard';
 import { cursor } from '@milkdown/kit/plugin/cursor';
 import { history } from '@milkdown/kit/plugin/history';
@@ -42,6 +43,10 @@ import { listSpreadFixes } from './plugins/list-spread-fix';
 import { remarkReferencesPlugin } from './plugins/references';
 import { wysiwygRemarkPlugins } from './plugins/remark-plugins';
 import { wysiwygKeymap } from './shortcuts';
+import { blockDropCursor, configureBlockHandle } from './plugins/block-handle';
+import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
+import { placeholderPlugin } from './plugins/placeholder';
+import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
 import { diagramView } from './views/diagram-view';
@@ -170,6 +175,10 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
           extensions: [syntaxHighlighting(defaultHighlightStyle, { fallback: true })],
         }));
         configureLinkTooltip(ctx);
+        // WYSIWYG UX polish (M4): bubble menu, slash commands, block handles.
+        configureBubbleMenu(ctx);
+        configureSlashMenu(ctx);
+        configureBlockHandle(ctx);
       })
       // Our keymap registers before the presets so §9.3 bindings win.
       .use(wysiwygKeymap)
@@ -198,6 +207,13 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(clipboard)
       .use(cursor)
       .use(indent)
+      // M4 chrome: bubble menu (FR-5.4), slash menu (FR-5.5),
+      // block handle + drop cursor (FR-5.6), empty-doc placeholder.
+      .use(bubbleTooltip)
+      .use(slashMenu)
+      .use(block)
+      .use(blockDropCursor)
+      .use(placeholderPlugin)
       .use(listener)
       .use(statePlugin)
       .create()
