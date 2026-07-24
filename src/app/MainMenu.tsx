@@ -14,6 +14,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUiStore } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 import type { RecentRecord } from '@/core/storage/db';
 import {
@@ -25,9 +26,10 @@ import {
 } from '@/features/files/actions';
 import { listRecents } from '@/features/files/recents';
 
-/** App menu per requirements §8.1. Export/History/Metadata/Settings arrive in M6. */
+/** App menu per requirements §8.1. */
 export function MainMenu() {
   const docOpen = useDocStore((s) => s.status === 'open');
+  const setActivePanel = useUiStore((s) => s.setActivePanel);
   const [open, setOpen] = useState(false);
   const [recents, setRecents] = useState<RecentRecord[]>([]);
 
@@ -71,11 +73,19 @@ export function MainMenu() {
           Save As… <DropdownMenuShortcut>Ctrl+Shift+S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Export</DropdownMenuItem>
-        <DropdownMenuItem disabled>History</DropdownMenuItem>
-        <DropdownMenuItem disabled>Metadata</DropdownMenuItem>
+        <DropdownMenuItem disabled onSelect={() => setActivePanel('export')}>
+          Export…
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled onSelect={() => setActivePanel('history')}>
+          History…
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('metadata')}>
+          Metadata…
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+        <DropdownMenuItem disabled onSelect={() => setActivePanel('settings')}>
+          Settings…
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

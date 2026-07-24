@@ -26,6 +26,10 @@ interface UiState {
   /** Cursor position for the status bar (FR-10.3); not persisted. */
   cursor: { line: number; col: number } | null;
   setCursor: (cursor: { line: number; col: number } | null) => void;
+
+  /** The open modal panel (metadata/history/export/settings), if any; not persisted. */
+  activePanel: 'metadata' | 'history' | 'export' | 'settings' | null;
+  setActivePanel: (panel: UiState['activePanel']) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -47,6 +51,9 @@ export const useUiStore = create<UiState>()(
 
       cursor: null,
       setCursor: (cursor) => set({ cursor }),
+
+      activePanel: null,
+      setActivePanel: (activePanel) => set({ activePanel }),
     }),
     {
       name: 'markyou.ui',

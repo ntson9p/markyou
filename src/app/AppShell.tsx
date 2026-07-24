@@ -10,6 +10,7 @@ import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/featu
 import { startDraftGuard } from '@/features/files/drafts';
 import { useFileDrop } from '@/features/files/useFileDrop';
 import { WelcomeScreen } from '@/features/files/WelcomeScreen';
+import { MetadataPanel } from '@/features/metadata/MetadataPanel';
 import { Outline } from '@/features/outline/Outline';
 
 const MODE_SHORTCUTS: Record<string, EditorMode> = {
@@ -105,6 +106,7 @@ export function AppShell() {
       </main>
       <StatusBar />
       <Notices />
+      <MetadataPanel />
     </div>
   );
 }
