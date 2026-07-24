@@ -159,7 +159,12 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
     <div
       role="toolbar"
       aria-label="Formatting"
-      className="flex flex-wrap items-center gap-0.5 border-b border-border bg-background px-2 py-1"
+      className={cn(
+        'flex items-center gap-0.5 border-b border-border bg-background px-2 py-1',
+        // Mobile: one scrollable row of priority actions; desktop wraps.
+        'flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible',
+        '[&>*]:shrink-0',
+      )}
       data-testid="wysiwyg-toolbar"
     >
       <ToolbarButton label="Undo (Ctrl+Z)" disabled={disabled} onClick={() => run(undoCommand.key)}>

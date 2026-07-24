@@ -1,4 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useIsSmallScreen } from '@/app/useMediaQuery';
 import { useUiStore, type EditorMode } from '@/app/store/ui';
 
 const MODES: { value: EditorMode; label: string; shortcut: string }[] = [
@@ -10,17 +11,22 @@ const MODES: { value: EditorMode; label: string; shortcut: string }[] = [
 export function ModeSwitcher() {
   const mode = useUiStore((s) => s.mode);
   const setMode = useUiStore((s) => s.setMode);
+  const isSmall = useIsSmallScreen();
+
+  // Dual mode is desktop-only (D4); on small screens it falls back to WYSIWYG.
+  const modes = isSmall ? MODES.filter((m) => m.value !== 'dual') : MODES;
+  const value = isSmall && mode === 'dual' ? 'wysiwyg' : mode;
 
   return (
     <ToggleGroup
       type="single"
-      value={mode}
-      onValueChange={(value) => {
-        if (value) setMode(value as EditorMode);
+      value={value}
+      onValueChange={(next) => {
+        if (next) setMode(next as EditorMode);
       }}
       aria-label="Editor mode"
     >
-      {MODES.map((m) => (
+      {modes.map((m) => (
         <ToggleGroupItem key={m.value} value={m.value} title={`${m.label} (${m.shortcut})`}>
           {m.label}
         </ToggleGroupItem>

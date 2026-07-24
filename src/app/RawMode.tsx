@@ -5,6 +5,7 @@ import { useDocStore } from '@/core/document/store';
 import { Preview } from '@/editors/preview/Preview';
 import { RawEditor } from '@/editors/raw/RawEditor';
 import { useRawPreviewScrollSync } from '@/features/scrollsync/useRawPreviewScrollSync';
+import { useIsSmallScreen } from '@/app/useMediaQuery';
 import { useUiStore } from '@/app/store/ui';
 
 /** Raw mode (FR-3): CodeMirror source editor + toggleable live preview column. */
@@ -13,16 +14,28 @@ export function RawMode() {
   const rawSplit = useUiStore((s) => s.rawSplit);
   const setRawSplit = useUiStore((s) => s.setRawSplit);
   const frontmatterBlock = useDocStore((s) => s.frontmatter.rawBlock);
+  const isSmall = useIsSmallScreen();
 
   const lineOffset = useMemo(
     () => (frontmatterBlock ? frontmatterBlock.split('\n').length - 1 : 0),
     [frontmatterBlock],
   );
 
+  // Side-by-side sync only runs when both panes are visible (desktop split).
   const { setView, setPreview, invalidateAnchors } = useRawPreviewScrollSync({
-    enabled: previewVisible,
+    enabled: previewVisible && !isSmall,
     lineOffset,
   });
+
+  // Mobile: the preview toggle replaces the source pane rather than splitting
+  // the narrow viewport into two columns (§8.2).
+  if (isSmall && previewVisible) {
+    return (
+      <div className="h-full" data-testid="raw-preview-full">
+        <Preview onContainerReady={setPreview} onRendered={invalidateAnchors} />
+      </div>
+    );
+  }
 
   if (!previewVisible) {
     return <RawEditor onViewReady={setView} />;

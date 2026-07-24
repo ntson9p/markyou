@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Loader2 } from 'lucide-react';
 
+import { useIsSmallScreen } from '@/app/useMediaQuery';
 import { useUiStore } from '@/app/store/ui';
 
 // Editor engines are lazy chunks (initial-JS budget §7); the service worker
@@ -22,8 +23,19 @@ function PaneLoader() {
 /** The pane region, switched by mode (FR-2.1). */
 export function EditorArea() {
   const mode = useUiStore((s) => s.mode);
+  const isSmall = useIsSmallScreen();
 
-  const pane = mode === 'raw' ? <RawMode /> : mode === 'wysiwyg' ? <WysiwygMode /> : <DualMode />;
+  // Dual is desktop-only (D4): a persisted 'dual' renders single-pane on
+  // phones without overwriting the user's desktop preference.
+  const effectiveMode = isSmall && mode === 'dual' ? 'wysiwyg' : mode;
+  const pane =
+    effectiveMode === 'raw' ? (
+      <RawMode />
+    ) : effectiveMode === 'wysiwyg' ? (
+      <WysiwygMode />
+    ) : (
+      <DualMode />
+    );
 
   return <Suspense fallback={<PaneLoader />}>{pane}</Suspense>;
 }

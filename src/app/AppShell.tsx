@@ -4,6 +4,7 @@ import { EditorArea } from '@/app/EditorArea';
 import { Notices } from '@/app/Notices';
 import { StatusBar } from '@/app/StatusBar';
 import { TopBar } from '@/app/TopBar';
+import { useIsSmallScreen } from '@/app/useMediaQuery';
 import { useUiStore, type EditorMode } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/features/files/actions';
@@ -69,6 +70,28 @@ function useGlobalShortcuts() {
   }, [setMode]);
 }
 
+/**
+ * Track the visual viewport (§8.2): when the mobile virtual keyboard opens,
+ * the layout viewport doesn't shrink, so pin the shell to `visualViewport`
+ * height to keep the status bar and toolbar above the keyboard.
+ */
+function useVisualViewportHeight() {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const apply = () => root.style.setProperty('--app-height', `${vv.height}px`);
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+      root.style.removeProperty('--app-height');
+    };
+  }, []);
+}
+
 /** FR-1.6: closing the tab with unsaved changes triggers the leave-warning. */
 function useLeaveWarning() {
   useEffect(() => {
@@ -86,20 +109,22 @@ function useLeaveWarning() {
 export function AppShell() {
   const status = useDocStore((s) => s.status);
   const outlineVisible = useUiStore((s) => s.outlineVisible);
+  const isSmall = useIsSmallScreen();
 
   useGlobalShortcuts();
   useLeaveWarning();
+  useVisualViewportHeight();
   useFileDrop();
   useEffect(() => startDraftGuard(), []);
   useEffect(() => startSnapshotScheduler(), []);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col" style={{ height: isSmall ? 'var(--app-height, 100%)' : '100%' }}>
       <TopBar />
-      <main className="flex min-h-0 flex-1" aria-label="Editor area">
+      <main className="relative flex min-h-0 flex-1" aria-label="Editor area">
         {status === 'open' ? (
           <>
-            {outlineVisible && <Outline />}
+            {outlineVisible && <Outline drawer={isSmall} />}
             <div className="min-h-0 flex-1">
               <EditorArea />
             </div>

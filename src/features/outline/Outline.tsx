@@ -68,16 +68,37 @@ function useActiveHeading(items: OutlineItem[]): number {
   return active;
 }
 
-/** Collapsible outline sidebar (FR-10.1): heading tree, jump, active section. */
-export function Outline() {
+/** Collapsible outline (FR-10.1): heading tree, jump, active section.
+ * Renders inline as a sidebar on desktop, or as an overlay drawer on small
+ * screens (§8.2) where it slides over the content with a dismiss backdrop. */
+export function Outline({ drawer = false }: { drawer?: boolean }) {
   const body = useDocStore((s) => s.body);
   const toggleOutline = useUiStore((s) => s.toggleOutline);
   const items = useMemo(() => extractOutline(body), [body]);
   const active = useActiveHeading(items);
 
-  return (
+  // In drawer mode, Esc dismisses the overlay (Esc-closes-overlays, §a11y).
+  useEffect(() => {
+    if (!drawer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') toggleOutline();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawer, toggleOutline]);
+
+  const jump = (line: number) => {
+    jumpToBodyLine(line);
+    // On mobile the drawer overlays the content — close it after navigating.
+    if (drawer) toggleOutline();
+  };
+
+  const aside = (
     <aside
-      className="flex h-full w-60 shrink-0 flex-col border-r bg-muted/20"
+      className={cn(
+        'flex h-full flex-col border-r bg-muted/20',
+        drawer ? 'w-72 max-w-[80vw] shadow-xl' : 'w-60 shrink-0',
+      )}
       aria-label="Document outline"
       data-testid="outline"
     >
@@ -100,7 +121,7 @@ export function Outline() {
             <button
               key={`${item.line}-${i}`}
               type="button"
-              onClick={() => jumpToBodyLine(item.line)}
+              onClick={() => jump(item.line)}
               title={item.text}
               data-active={i === active}
               className={cn(
@@ -115,5 +136,21 @@ export function Outline() {
         )}
       </nav>
     </aside>
+  );
+
+  if (!drawer) return aside;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-30 bg-foreground/30 motion-safe:animate-in motion-safe:fade-in"
+        onClick={toggleOutline}
+        aria-hidden
+        data-testid="outline-backdrop"
+      />
+      <div className="fixed inset-y-0 left-0 z-40 motion-safe:animate-in motion-safe:slide-in-from-left">
+        {aside}
+      </div>
+    </>
   );
 }
