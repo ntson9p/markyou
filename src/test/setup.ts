@@ -24,6 +24,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+// jsdom lacks ResizeObserver (used by scroll sync + CodeMirror).
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // Radix menus rely on pointer APIs jsdom lacks.
 if (typeof window !== 'undefined') {
   if (!Element.prototype.hasPointerCapture) {

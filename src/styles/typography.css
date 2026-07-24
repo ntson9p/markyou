@@ -1,0 +1,402 @@
+/*
+ * MarkYou document typography — the styling reference (FR-4.4).
+ * Shared by preview, the WYSIWYG editor, and HTML/PDF export, so a document
+ * can never look different between modes. Plain CSS (no framework classes) so
+ * it can be inlined into standalone exports.
+ */
+
+.md-doc {
+  --doc-fg: oklch(0.22 0.005 285);
+  --doc-muted: oklch(0.5 0.01 285);
+  --doc-border: oklch(0.9 0.005 264);
+  --doc-code-bg: oklch(0.955 0.004 264);
+  --doc-quote-border: oklch(0.85 0.01 264);
+  --doc-link: oklch(0.5 0.2 262);
+  --doc-mark-note: oklch(0.55 0.18 262);
+  --doc-mark-tip: oklch(0.55 0.15 160);
+  --doc-mark-important: oklch(0.55 0.2 300);
+  --doc-mark-warning: oklch(0.65 0.15 75);
+  --doc-mark-caution: oklch(0.55 0.2 25);
+
+  color: var(--doc-fg);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  overflow-wrap: break-word;
+}
+
+.dark .md-doc {
+  --doc-fg: oklch(0.93 0.004 285);
+  --doc-muted: oklch(0.7 0.01 285);
+  --doc-border: oklch(1 0 0 / 14%);
+  --doc-code-bg: oklch(1 0 0 / 8%);
+  --doc-quote-border: oklch(1 0 0 / 22%);
+  --doc-link: oklch(0.72 0.15 262);
+}
+
+.md-doc > :first-child {
+  margin-top: 0;
+}
+.md-doc > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Headings ---------- */
+.md-doc h1,
+.md-doc h2,
+.md-doc h3,
+.md-doc h4,
+.md-doc h5,
+.md-doc h6 {
+  font-weight: 650;
+  line-height: 1.25;
+  margin: 1.6em 0 0.6em;
+  scroll-margin-top: 4rem;
+}
+.md-doc h1 {
+  font-size: 2em;
+  margin-top: 0.8em;
+}
+.md-doc h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--doc-border);
+  padding-bottom: 0.25em;
+}
+.md-doc h3 {
+  font-size: 1.25em;
+}
+.md-doc h4 {
+  font-size: 1.05em;
+}
+.md-doc h5,
+.md-doc h6 {
+  font-size: 1em;
+}
+.md-doc h6 {
+  color: var(--doc-muted);
+}
+
+/* ---------- Block spacing ---------- */
+.md-doc p,
+.md-doc ul,
+.md-doc ol,
+.md-doc table,
+.md-doc pre,
+.md-doc blockquote {
+  margin: 0.75em 0;
+}
+
+/* ---------- Links ---------- */
+.md-doc a {
+  color: var(--doc-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Lists ---------- */
+.md-doc ul,
+.md-doc ol {
+  padding-left: 1.6em;
+}
+.md-doc ul {
+  list-style: disc;
+}
+.md-doc ol {
+  list-style: decimal;
+}
+.md-doc li {
+  margin: 0.25em 0;
+}
+.md-doc li > ul,
+.md-doc li > ol {
+  margin: 0.25em 0;
+}
+
+/* Task lists (GFM) */
+.md-doc li.task-list-item {
+  list-style: none;
+}
+.md-doc ul:has(> li.task-list-item) {
+  padding-left: 0.5em;
+}
+.md-doc li.task-list-item > input[type='checkbox'] {
+  margin-right: 0.5em;
+  vertical-align: -0.1em;
+  accent-color: var(--doc-link);
+}
+
+/* ---------- Code ---------- */
+.md-doc code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.875em;
+  background: var(--doc-code-bg);
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+}
+.md-doc pre {
+  background: var(--doc-code-bg);
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  padding: 0.9em 1.1em;
+  overflow-x: auto;
+  line-height: 1.55;
+}
+.md-doc pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+/* ---------- Blockquote ---------- */
+.md-doc blockquote {
+  border-left: 3px solid var(--doc-quote-border);
+  padding: 0.1em 1em;
+  color: var(--doc-muted);
+}
+
+/* ---------- Callouts (FR-5.10) ---------- */
+.md-doc .callout {
+  border: 1px solid var(--doc-border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  margin: 0.75em 0;
+}
+.md-doc .callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-weight: 600;
+  margin-bottom: 0.25em;
+}
+.md-doc .callout-title::before {
+  content: '';
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: var(--callout-icon) no-repeat center / contain;
+  -webkit-mask: var(--callout-icon) no-repeat center / contain;
+}
+.md-doc .callout-note {
+  border-left-color: var(--doc-mark-note);
+}
+.md-doc .callout-note > .callout-title {
+  color: var(--doc-mark-note);
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+.md-doc .callout-tip {
+  border-left-color: var(--doc-mark-tip);
+}
+.md-doc .callout-tip > .callout-title {
+  color: var(--doc-mark-tip);
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E");
+}
+.md-doc .callout-important {
+  border-left-color: var(--doc-mark-important);
+}
+.md-doc .callout-important > .callout-title {
+  color: var(--doc-mark-important);
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7.9 20A9 9 0 1 0 4 16.1L2 22Z'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E");
+}
+.md-doc .callout-warning {
+  border-left-color: var(--doc-mark-warning);
+}
+.md-doc .callout-warning > .callout-title {
+  color: var(--doc-mark-warning);
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+}
+.md-doc .callout-caution {
+  border-left-color: var(--doc-mark-caution);
+}
+.md-doc .callout-caution > .callout-title {
+  color: var(--doc-mark-caution);
+  --callout-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m4.9 4.9 14.2 14.2'/%3E%3C/svg%3E");
+}
+.md-doc .callout > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Tables (GFM) ---------- */
+.md-doc table {
+  border-collapse: collapse;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+.md-doc th,
+.md-doc td {
+  border: 1px solid var(--doc-border);
+  padding: 0.4em 0.8em;
+  text-align: left;
+}
+.md-doc th {
+  font-weight: 600;
+  background: var(--doc-code-bg);
+}
+.md-doc th[align='center'],
+.md-doc td[align='center'] {
+  text-align: center;
+}
+.md-doc th[align='right'],
+.md-doc td[align='right'] {
+  text-align: right;
+}
+
+/* ---------- Misc ---------- */
+.md-doc hr {
+  border: none;
+  border-top: 2px solid var(--doc-border);
+  margin: 2em 0;
+}
+.md-doc img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.md-doc mark {
+  background: oklch(0.9 0.15 95);
+}
+.md-doc kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  border: 1px solid var(--doc-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  background: var(--doc-code-bg);
+}
+
+/* Footnotes (GFM) */
+.md-doc section[data-footnotes] {
+  margin-top: 2.5em;
+  border-top: 1px solid var(--doc-border);
+  font-size: 0.875em;
+  color: var(--doc-muted);
+}
+.md-doc a[data-footnote-ref] {
+  text-decoration: none;
+  font-weight: 600;
+}
+.md-doc a[data-footnote-backref] {
+  text-decoration: none;
+}
+
+/* Math (KaTeX) */
+.md-doc .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2em 0;
+}
+
+/* Mermaid diagrams */
+.md-doc .mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 1em 0;
+}
+.md-doc .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+.md-doc .mermaid-error {
+  color: var(--doc-mark-caution);
+  font-size: 0.875em;
+  border: 1px dashed var(--doc-mark-caution);
+  border-radius: 6px;
+  padding: 0.5em 0.8em;
+}
+
+/* ---------- Syntax highlighting (highlight.js, theme-aware) ---------- */
+.md-doc .hljs-comment,
+.md-doc .hljs-quote {
+  color: var(--doc-muted);
+  font-style: italic;
+}
+.md-doc .hljs-keyword,
+.md-doc .hljs-selector-tag,
+.md-doc .hljs-subst,
+.md-doc .hljs-type {
+  color: oklch(0.55 0.2 300);
+}
+.md-doc .hljs-string,
+.md-doc .hljs-regexp,
+.md-doc .hljs-addition,
+.md-doc .hljs-attribute,
+.md-doc .hljs-meta .hljs-string {
+  color: oklch(0.55 0.15 145);
+}
+.md-doc .hljs-number,
+.md-doc .hljs-literal,
+.md-doc .hljs-variable,
+.md-doc .hljs-template-variable,
+.md-doc .hljs-tag .hljs-attr {
+  color: oklch(0.55 0.16 65);
+}
+.md-doc .hljs-title,
+.md-doc .hljs-section,
+.md-doc .hljs-name,
+.md-doc .hljs-selector-id,
+.md-doc .hljs-selector-class,
+.md-doc .hljs-function {
+  color: oklch(0.5 0.19 262);
+}
+.md-doc .hljs-symbol,
+.md-doc .hljs-bullet,
+.md-doc .hljs-link,
+.md-doc .hljs-deletion {
+  color: oklch(0.55 0.2 25);
+}
+.md-doc .hljs-built_in,
+.md-doc .hljs-builtin-name,
+.md-doc .hljs-meta {
+  color: oklch(0.5 0.12 220);
+}
+.md-doc .hljs-emphasis {
+  font-style: italic;
+}
+.md-doc .hljs-strong {
+  font-weight: 600;
+}
+.dark .md-doc .hljs-keyword,
+.dark .md-doc .hljs-selector-tag,
+.dark .md-doc .hljs-subst,
+.dark .md-doc .hljs-type {
+  color: oklch(0.75 0.15 300);
+}
+.dark .md-doc .hljs-string,
+.dark .md-doc .hljs-regexp,
+.dark .md-doc .hljs-addition,
+.dark .md-doc .hljs-attribute {
+  color: oklch(0.75 0.13 145);
+}
+.dark .md-doc .hljs-number,
+.dark .md-doc .hljs-literal,
+.dark .md-doc .hljs-variable,
+.dark .md-doc .hljs-template-variable {
+  color: oklch(0.78 0.13 65);
+}
+.dark .md-doc .hljs-title,
+.dark .md-doc .hljs-section,
+.dark .md-doc .hljs-name,
+.dark .md-doc .hljs-function {
+  color: oklch(0.72 0.14 262);
+}
+.dark .md-doc .hljs-symbol,
+.dark .md-doc .hljs-bullet,
+.dark .md-doc .hljs-link,
+.dark .md-doc .hljs-deletion {
+  color: oklch(0.72 0.16 25);
+}
+.dark .md-doc .hljs-built_in,
+.dark .md-doc .hljs-meta {
+  color: oklch(0.72 0.1 220);
+}

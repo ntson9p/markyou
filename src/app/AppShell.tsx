@@ -30,6 +30,12 @@ function useGlobalShortcuts() {
         setMode(MODE_SHORTCUTS[e.code]);
         return;
       }
+      // Toggle preview in raw mode (FR-3.3)
+      if (e.code === 'KeyP' && e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        useUiStore.getState().toggleRawPreview();
+        return;
+      }
       // File lifecycle (§8.3)
       if (e.code === 'KeyS' && !e.altKey) {
         e.preventDefault();

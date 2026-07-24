@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { countText } from '@/core/document/counts';
 import { useDocStore } from '@/core/document/store';
+import { useUiStore } from '@/app/store/ui';
 
 function useNow(intervalMs = 30_000): number {
   const [now, setNow] = useState(() => Date.now());
@@ -26,6 +27,8 @@ export function StatusBar() {
   const body = useDocStore((s) => s.body);
   const dirty = useDocStore((s) => s.dirty);
   const lastSavedAt = useDocStore((s) => s.lastSavedAt);
+  const cursor = useUiStore((s) => s.cursor);
+  const mode = useUiStore((s) => s.mode);
   const now = useNow();
 
   const counts = useMemo(() => countText(body), [body]);
@@ -41,6 +44,11 @@ export function StatusBar() {
             {counts.words.toLocaleString()} words · {counts.readingMinutes} min read
           </span>
           <span className="flex-1" />
+          {cursor && mode !== 'wysiwyg' && (
+            <span data-testid="status-cursor">
+              L{cursor.line}:C{cursor.col}
+            </span>
+          )}
           <span data-testid="status-save">
             {dirty ? 'Unsaved changes' : savedLabel(lastSavedAt, now)}
           </span>

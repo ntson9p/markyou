@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './typography.css';
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));
@@ -25,6 +26,21 @@
   --input: oklch(0.911 0.006 264.531);
   --ring: oklch(0.511 0.226 276.966);
   --surface: oklch(0.945 0.004 264.542);
+
+  /* CodeMirror markdown tokens */
+  --cm-heading: oklch(0.45 0.2 276);
+  --cm-link: oklch(0.5 0.2 262);
+  --cm-url: oklch(0.55 0.12 220);
+  --cm-code: oklch(0.5 0.15 300);
+  --cm-quote: oklch(0.5 0.05 160);
+  --cm-marker: oklch(0.55 0.15 25);
+  --cm-kw: oklch(0.5 0.2 300);
+  --cm-str: oklch(0.52 0.14 145);
+  --cm-comment: oklch(0.55 0.02 285);
+  --cm-num: oklch(0.55 0.16 65);
+  --cm-fn: oklch(0.5 0.19 262);
+  --cm-type: oklch(0.5 0.12 190);
+  --cm-prop: oklch(0.45 0.1 240);
 }
 
 .dark {
@@ -48,6 +64,21 @@
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.673 0.182 276.935);
   --surface: oklch(0.145 0.005 285.885);
+
+  /* CodeMirror markdown tokens (dark) */
+  --cm-heading: oklch(0.75 0.14 276);
+  --cm-link: oklch(0.72 0.15 262);
+  --cm-url: oklch(0.72 0.1 220);
+  --cm-code: oklch(0.75 0.12 300);
+  --cm-quote: oklch(0.72 0.06 160);
+  --cm-marker: oklch(0.72 0.14 25);
+  --cm-kw: oklch(0.75 0.15 300);
+  --cm-str: oklch(0.75 0.12 145);
+  --cm-comment: oklch(0.62 0.02 285);
+  --cm-num: oklch(0.78 0.13 65);
+  --cm-fn: oklch(0.72 0.14 262);
+  --cm-type: oklch(0.75 0.1 190);
+  --cm-prop: oklch(0.72 0.09 240);
 }
 
 @theme inline {

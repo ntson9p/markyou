@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -38,6 +39,19 @@ export const useThemeStore = create<ThemeState>()((set) => ({
     set({ theme });
   },
 }));
+
+/** React hook: the currently applied theme ('light' | 'dark'), reactive to pref + OS changes. */
+export function useResolvedTheme(): 'light' | 'dark' {
+  const theme = useThemeStore((s) => s.theme);
+  const subscribe = (cb: () => void) => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    media.addEventListener('change', cb);
+    return () => media.removeEventListener('change', cb);
+  };
+  const systemDark = useSyncExternalStore(subscribe, systemPrefersDark);
+  if (theme === 'system') return systemDark ? 'dark' : 'light';
+  return theme;
+}
 
 /** Read the persisted theme, apply it, and track OS-level changes while in `system`. */
 export function initTheme() {
