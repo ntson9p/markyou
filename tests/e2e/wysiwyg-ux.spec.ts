@@ -63,6 +63,9 @@ test.describe('WYSIWYG UX polish (M4)', () => {
     await page.keyboard.type('head');
     await expect(slash.locator('.slash-item')).toHaveCount(3);
     await expect(slash.locator('.slash-item').first()).toContainText('Heading 1');
+    // Wait for the active item to settle at the top before navigating (the
+    // filter render resets it) — avoids a type-then-navigate race under load.
+    await expect(slash.locator('.slash-item.active')).toContainText('Heading 1');
 
     // Arrow-down selects Heading 2, Enter inserts it (removing the "/head" text).
     await page.keyboard.press('ArrowDown');

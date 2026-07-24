@@ -1,26 +1,33 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { getFakeDisk, pinMode, seedFakeFile, stubFsa } from './helpers';
 
+/** Raw-mode source editor (CodeMirror). File flows are editor-agnostic; raw is
+ *  the simplest real editor to drive — it edits the full text like the file. */
+const source = (page: Page) => page.locator('.cm-content');
+
+async function setSource(page: Page, text: string) {
+  const el = source(page);
+  await el.click();
+  await el.fill(text);
+}
+
 test.describe('document lifecycle (FR-1)', () => {
-  // File flows are editor-agnostic; drive them through dual mode's
-  // placeholder textarea (real dual panes land in M5).
   test.beforeEach(async ({ page }) => {
-    await pinMode(page, 'dual');
+    await pinMode(page, 'raw');
   });
 
   test('new document, typing, dirty indicator', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
 
-    const editor = page.getByTestId('editor-textarea');
-    await expect(editor).toBeVisible();
+    await expect(source(page)).toBeVisible();
     await expect(page.getByTestId('dirty-dot')).not.toBeVisible();
 
-    await editor.fill('# Hello\n\nSome text.');
+    await setSource(page, '# Hello\n\nSome text.');
     await expect(page.getByTestId('dirty-dot')).toBeVisible();
     await expect(page.getByTestId('status-save')).toHaveText('Unsaved changes');
-    // Counts run over the raw source in M1 ('#' counts as a token); AST-based counts land in M6.
+    // Counts run over the raw source ('#' counts as a token); AST counts land in M6.
     await expect(page.getByTestId('status-counts')).toContainText('4 words');
   });
 
@@ -28,12 +35,12 @@ test.describe('document lifecycle (FR-1)', () => {
     context,
   }) => {
     const page = await context.newPage();
-    await pinMode(page, 'dual');
+    await pinMode(page, 'raw');
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
 
     const text = '# Recovered\n\nThis text was never saved to a file.';
-    await page.getByTestId('editor-textarea').fill(text);
+    await setSource(page, text);
     // Draft guard writes within 1 s of idle — give it a moment.
     await page.waitForTimeout(1400);
 
@@ -41,7 +48,7 @@ test.describe('document lifecycle (FR-1)', () => {
     await page.close({ runBeforeUnload: false });
 
     const reopened = await context.newPage();
-    await pinMode(reopened, 'dual');
+    await pinMode(reopened, 'raw');
     await reopened.goto('/');
     await expect(reopened.getByTestId('recovery-banner')).toBeVisible();
 
@@ -50,16 +57,17 @@ test.describe('document lifecycle (FR-1)', () => {
     await expect(reopened.getByLabel('Draft changes preview')).toContainText('# Recovered');
 
     await reopened.getByTestId('recovery-restore').click();
-    await expect(reopened.getByTestId('editor-textarea')).toHaveValue(text);
+    await expect(source(reopened)).toContainText('# Recovered');
+    await expect(source(reopened)).toContainText('This text was never saved to a file.');
     await expect(reopened.getByTestId('dirty-dot')).toBeVisible();
   });
 
   test('discarding a recovery draft leaves a clean welcome screen', async ({ context }) => {
     const page = await context.newPage();
-    await pinMode(page, 'dual');
+    await pinMode(page, 'raw');
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
-    await page.getByTestId('editor-textarea').fill('throwaway');
+    await setSource(page, 'throwaway');
     await page.waitForTimeout(1400);
     await page.close({ runBeforeUnload: false });
 
@@ -79,7 +87,7 @@ test.describe('document lifecycle (FR-1)', () => {
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
 
-    await page.getByTestId('editor-textarea').fill('# My Notes\n\ncontent here');
+    await setSource(page, '# My Notes\n\ncontent here');
     await page.keyboard.press('ControlOrMeta+s');
 
     await expect(page.getByTestId('dirty-dot')).not.toBeVisible();
@@ -92,11 +100,11 @@ test.describe('document lifecycle (FR-1)', () => {
 
   test('a clean save leaves no recovery draft behind', async ({ context }) => {
     const page = await context.newPage();
-    await pinMode(page, 'dual');
+    await pinMode(page, 'raw');
     await stubFsa(page);
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
-    await page.getByTestId('editor-textarea').fill('saved content');
+    await setSource(page, 'saved content');
     await page.waitForTimeout(1400);
     await page.keyboard.press('ControlOrMeta+s');
     await expect(page.getByTestId('status-save')).toContainText('Saved');
@@ -114,7 +122,8 @@ test.describe('document lifecycle (FR-1)', () => {
     await page.goto('/');
     await page.getByTestId('welcome-open').click();
 
-    await expect(page.getByTestId('editor-textarea')).toHaveValue('# Existing\n\nfile content');
+    await expect(source(page)).toContainText('# Existing');
+    await expect(source(page)).toContainText('file content');
     await expect(page.getByTestId('doc-title')).toHaveText('readme.md');
     await expect(page.getByTestId('dirty-dot')).not.toBeVisible();
   });
@@ -124,7 +133,7 @@ test.describe('document lifecycle (FR-1)', () => {
     await seedFakeFile(page, 'notes.md', 'notes');
     await page.goto('/');
     await page.getByTestId('welcome-open').click();
-    await expect(page.getByTestId('editor-textarea')).toHaveValue('notes');
+    await expect(source(page)).toContainText('notes');
 
     await page.reload();
     await expect(page.getByTestId('recents-list')).toContainText('notes.md');
@@ -134,7 +143,7 @@ test.describe('document lifecycle (FR-1)', () => {
     await stubFsa(page);
     await page.goto('/');
     await page.getByTestId('welcome-new').click();
-    await page.getByTestId('editor-textarea').fill('## Meeting Minutes 2026\n\n- item');
+    await setSource(page, '## Meeting Minutes 2026\n\n- item');
     await page.keyboard.press('ControlOrMeta+Shift+s');
 
     await expect(page.getByTestId('doc-title')).toHaveText('meeting-minutes-2026.md');

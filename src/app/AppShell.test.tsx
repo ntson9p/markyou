@@ -1,15 +1,20 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from '@/app/AppShell';
 import { useUiStore } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 
+// The mode panes mount real editor engines (CodeMirror/Milkdown) that need a
+// layout engine jsdom lacks; they have their own E2E suites. Shell-level
+// behavior (dirty dot, counts, frontmatter split, mode switch) is all
+// store-derived, so we stub the pane region and drive the store directly.
+vi.mock('@/app/EditorArea', () => ({
+  EditorArea: () => <div data-testid="editor-region" />,
+}));
+
 describe('AppShell', () => {
   beforeEach(() => {
-    // Shell-level assertions (dirty dot, counts, frontmatter split) use the
-    // plain textarea still backing dual mode until M5 — real editor engines
-    // have their own suites.
     useUiStore.setState({ mode: 'dual' });
     useDocStore.getState().closeDocument();
   });
@@ -21,10 +26,10 @@ describe('AppShell', () => {
     expect(screen.getByTestId('status-save')).toHaveTextContent('No document open');
   });
 
-  it('creates a new document and shows the editor (FR-1.1)', () => {
+  it('creates a new document and shows the editor region (FR-1.1)', () => {
     render(<AppShell />);
     fireEvent.click(screen.getByTestId('welcome-new'));
-    expect(screen.getByTestId('editor-textarea')).toBeInTheDocument();
+    expect(screen.getByTestId('editor-region')).toBeInTheDocument();
     expect(screen.getByTestId('doc-title')).toHaveTextContent('Untitled');
     expect(screen.getByRole('radiogroup', { name: 'Editor mode' })).toBeInTheDocument();
   });
@@ -33,7 +38,7 @@ describe('AppShell', () => {
     render(<AppShell />);
     fireEvent.click(screen.getByTestId('welcome-new'));
     expect(screen.queryByTestId('dirty-dot')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('editor-textarea'), { target: { value: 'hello' } });
+    act(() => useDocStore.getState().setFullText('hello', 'raw'));
     expect(screen.getByTestId('dirty-dot')).toBeInTheDocument();
     expect(screen.getByTestId('status-save')).toHaveTextContent('Unsaved changes');
   });
@@ -41,9 +46,7 @@ describe('AppShell', () => {
   it('updates word counts in the status bar (FR-10.2)', () => {
     render(<AppShell />);
     fireEvent.click(screen.getByTestId('welcome-new'));
-    fireEvent.change(screen.getByTestId('editor-textarea'), {
-      target: { value: 'one two three' },
-    });
+    act(() => useDocStore.getState().setFullText('one two three', 'raw'));
     expect(screen.getByTestId('status-counts')).toHaveTextContent('3 words');
   });
 
@@ -56,12 +59,10 @@ describe('AppShell', () => {
     expect(useUiStore.getState().mode).toBe('dual');
   });
 
-  it('keeps frontmatter out of nothing — textarea edits full text including frontmatter', () => {
+  it('splits frontmatter off the body when the full text is edited', () => {
     render(<AppShell />);
     fireEvent.click(screen.getByTestId('welcome-new'));
-    fireEvent.change(screen.getByTestId('editor-textarea'), {
-      target: { value: '---\ntitle: T\n---\nbody' },
-    });
+    act(() => useDocStore.getState().setFullText('---\ntitle: T\n---\nbody', 'raw'));
     const s = useDocStore.getState();
     expect(s.body).toBe('body');
     expect(s.frontmatter.data).toEqual({ title: 'T' });

@@ -536,7 +536,9 @@ body > div[data-show] .link-preview,
   display: block;
 }
 
-.wysiwyg-root .milkdown-list-item-block > div {
+/* The component nests <li.list-item> inside the NodeView div; the marker
+ * (.label-wrapper) and content (.children) are its flex row. */
+.wysiwyg-root .milkdown-list-item-block .list-item {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
