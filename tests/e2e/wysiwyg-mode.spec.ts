@@ -253,6 +253,29 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     await expect(editor(page)).toContainText('first line');
   });
 
+  test('mermaid renders as a diagram with click-to-edit source (FR-5.9)', async ({ page }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'diagram.md', '```mermaid\ngraph TD;\n  A-->B;\n```\n');
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page)).toBeVisible({ timeout: 15000 });
+
+    const diagram = editor(page).locator('.diagram-node');
+    await expect(diagram).toBeVisible();
+    // Mermaid is a lazy chunk; the SVG appears once it loads.
+    await expect(diagram.locator('svg')).toBeVisible({ timeout: 20000 });
+
+    await diagram.click();
+    const popover = page.getByRole('dialog', { name: 'Edit Mermaid diagram' });
+    await expect(popover).toBeVisible();
+    await expect(popover.locator('textarea')).toHaveValue(/graph TD/);
+    await popover.getByRole('button', { name: 'Cancel' }).click();
+
+    // The fence stays byte-identical through a WYSIWYG session (D13).
+    await page.keyboard.press('ControlOrMeta+Shift+Digit1');
+    await expect(page.locator('.cm-content')).toContainText('graph TD;');
+  });
+
   test('task list checkbox toggles by click and serializes (FR-5.7)', async ({ page }) => {
     await stubFsa(page);
     await seedFakeFile(page, 'tasks.md', '- [ ] buy milk\n- [x] write tests\n');
