@@ -30,7 +30,8 @@
   /* CodeMirror markdown tokens */
   --cm-heading: oklch(0.45 0.2 276);
   --cm-link: oklch(0.5 0.2 262);
-  --cm-url: oklch(0.55 0.12 220);
+  /* Darkened to clear WCAG AA (4.5:1) on the near-white editor background. */
+  --cm-url: oklch(0.5 0.13 220);
   --cm-code: oklch(0.5 0.15 300);
   --cm-quote: oklch(0.5 0.05 160);
   --cm-marker: oklch(0.55 0.15 25);

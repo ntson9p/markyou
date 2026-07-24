@@ -1,5 +1,5 @@
-import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
+import { EditorView as CmEditorView } from '@codemirror/view';
 import { codeBlockComponent, codeBlockConfig } from '@milkdown/kit/component/code-block';
 import { configureLinkTooltip, linkTooltipPlugin } from '@milkdown/kit/component/link-tooltip';
 import { listItemBlockComponent } from '@milkdown/kit/component/list-item-block';
@@ -31,6 +31,7 @@ import {
   toStringifyOptions,
   type MarkdownStylePrefs,
 } from '@/core/markdown/style';
+import { rawSyntaxHighlighting } from '@/editors/raw/theme';
 
 import { wysiwygCommands } from './commands';
 import { wysiwygInputRules } from './input-rules';
@@ -47,6 +48,7 @@ import { blockDropCursor, configureBlockHandle } from './plugins/block-handle';
 import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
 import { findPlugin } from './plugins/find';
 import { imagePastePlugin } from './plugins/image-paste';
+import { listA11yPlugin } from './plugins/list-a11y';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { calloutView } from './views/callout-view';
@@ -159,9 +161,17 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
         ctx.set(rootCtx, options.root);
         ctx.set(defaultValueCtx, options.defaultValue ?? '');
         ctx.set(remarkStringifyOptionsCtx, wysiwygStringifyOptions(prefs));
-        if (options.editable) {
-          ctx.update(editorViewOptionsCtx, (prev) => ({ ...prev, editable: options.editable }));
-        }
+        // Label the contenteditable surface for screen readers (§a11y; axe
+        // aria-input-field-name). Merge so Milkdown's own attributes survive.
+        ctx.update(editorViewOptionsCtx, (prev) => {
+          const prevAttrs =
+            prev.attributes && typeof prev.attributes === 'object' ? prev.attributes : {};
+          return {
+            ...prev,
+            ...(options.editable ? { editable: options.editable } : {}),
+            attributes: { ...prevAttrs, 'aria-label': 'Rich text editor' },
+          };
+        });
         if (options.onMarkdownUpdated) {
           const on = options.onMarkdownUpdated;
           ctx.get(listenerCtx).markdownUpdated((innerCtx, markdown, prevMarkdown) => {
@@ -175,7 +185,14 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
         ctx.update(codeBlockConfig.key, (prev) => ({
           ...prev,
           languages,
-          extensions: [syntaxHighlighting(defaultHighlightStyle, { fallback: true })],
+          extensions: [
+            // Theme-aware, AA-contrast highlighting shared with raw mode — the
+            // light-only defaultHighlightStyle is unreadable on the dark code
+            // surface (§a11y, FR-13.1).
+            rawSyntaxHighlighting,
+            // Label the code-block editor for screen readers (§a11y).
+            CmEditorView.contentAttributes.of({ 'aria-label': 'Code block editor' }),
+          ],
         }));
         configureLinkTooltip(ctx);
         // WYSIWYG UX polish (M4): bubble menu, slash commands, block handles.
@@ -220,6 +237,7 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(blockDropCursor)
       .use(placeholderPlugin)
       .use(findPlugin)
+      .use(listA11yPlugin)
       .use(listener)
       .use(statePlugin)
       .create()

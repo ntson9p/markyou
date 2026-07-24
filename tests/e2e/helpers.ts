@@ -59,6 +59,13 @@ export async function stubFsa(page: Page) {
   });
 }
 
+/** Pin the theme before boot so contrast scans are deterministic. */
+export async function pinTheme(page: Page, theme: 'light' | 'dark') {
+  await page.addInitScript((t) => {
+    window.localStorage.setItem('markyou.theme', t);
+  }, theme);
+}
+
 export async function getFakeDisk(page: Page): Promise<Record<string, string>> {
   return page.evaluate(
     () => (window as unknown as { __fsaFiles: Record<string, string> }).__fsaFiles,
