@@ -46,12 +46,14 @@ import { wysiwygKeymap } from './shortcuts';
 import { blockDropCursor, configureBlockHandle } from './plugins/block-handle';
 import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
 import { findPlugin } from './plugins/find';
+import { imagePastePlugin } from './plugins/image-paste';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
 import { diagramView } from './views/diagram-view';
 import { htmlViews } from './views/html-views';
+import { imageView } from './views/image-view';
 import { mathViews } from './views/math-views';
 
 /**
@@ -200,11 +202,13 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(htmlViews)
       .use(mathViews)
       .use(definitionView)
+      .use(imageView)
       .use(codeBlockComponent)
       .use(linkTooltipPlugin)
       .use(tableBlock)
       .use(listItemBlockComponent)
       .use(history)
+      .use(imagePastePlugin)
       .use(clipboard)
       .use(cursor)
       .use(indent)

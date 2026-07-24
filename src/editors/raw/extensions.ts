@@ -23,6 +23,7 @@ import {
 } from '@codemirror/view';
 
 import { formatCommands } from '@/editors/raw/format-commands';
+import { imagePasteExtension } from '@/editors/raw/image-paste';
 import { rawEditorTheme, rawSyntaxHighlighting } from '@/editors/raw/theme';
 
 /** Transactions carrying this annotation come from the store — never re-emitted (loop guard). */
@@ -82,6 +83,7 @@ export function buildRawExtensions(options: RawExtensionOptions): Extension[] {
     EditorView.lineWrapping,
     rawEditorTheme,
     rawSyntaxHighlighting,
+    imagePasteExtension,
     formatKeymap,
     keymap.of([
       ...closeBracketsKeymap,

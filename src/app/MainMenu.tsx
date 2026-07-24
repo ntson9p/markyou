@@ -14,6 +14,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { notify } from '@/app/store/notices';
 import { useUiStore } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 import type { RecentRecord } from '@/core/storage/db';
@@ -25,11 +26,18 @@ import {
   saveDocumentAs,
 } from '@/features/files/actions';
 import { listRecents } from '@/features/files/recents';
+import { assetsSupported, requestAssetsFolder, useAssetsStore } from '@/features/images/assets';
+
+async function chooseImagesFolder() {
+  const ok = await requestAssetsFolder();
+  if (ok) notify('info', 'Pasted images will be saved to the chosen folder as relative links.');
+}
 
 /** App menu per requirements §8.1. */
 export function MainMenu() {
   const docOpen = useDocStore((s) => s.status === 'open');
   const setActivePanel = useUiStore((s) => s.setActivePanel);
+  const imagesFolderSet = useAssetsStore((s) => s.dir != null);
   const [open, setOpen] = useState(false);
   const [recents, setRecents] = useState<RecentRecord[]>([]);
 
@@ -82,6 +90,11 @@ export function MainMenu() {
         <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('metadata')}>
           Metadata…
         </DropdownMenuItem>
+        {assetsSupported() && (
+          <DropdownMenuItem onSelect={() => void chooseImagesFolder()}>
+            {imagesFolderSet ? 'Change images folder…' : 'Images folder…'}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled onSelect={() => setActivePanel('settings')}>
           Settings…
