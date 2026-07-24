@@ -76,7 +76,7 @@ export function MainMenu() {
         <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('export')}>
           Export…
         </DropdownMenuItem>
-        <DropdownMenuItem disabled onSelect={() => setActivePanel('history')}>
+        <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('history')}>
           History…
         </DropdownMenuItem>
         <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('metadata')}>

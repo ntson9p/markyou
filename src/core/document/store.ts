@@ -55,6 +55,8 @@ export interface DocState {
   setBody: (body: string, origin: Origin) => void;
   /** Metadata panel writes a new frontmatter block ('' removes it). */
   setFrontmatterBlock: (block: string | null, origin?: Origin) => void;
+  /** Replace the whole document with a version snapshot (FR-12.3); marks dirty. */
+  restoreText: (text: string) => void;
   markSaved: (file: FileBinding) => void;
 }
 
@@ -160,6 +162,15 @@ export const useDocStore = create<DocState>()((set, get) => ({
       origin,
       dirty: true,
     });
+  },
+
+  restoreText: (text) => {
+    const state = get();
+    if (text === getFullText(state)) return;
+    const { frontmatter, body } = splitAndParse(text);
+    // origin 'system' so every editor applies it (none authored it); dirty so
+    // the restore is savable and draft-guarded.
+    set({ body, frontmatter, version: state.version + 1, origin: 'system', dirty: true });
   },
 
   markSaved: (file) =>

@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import { expect, test, type Page } from '@playwright/test';
 
 import { pinMode, seedFakeFile, stubFsa } from './helpers';
@@ -19,24 +17,15 @@ async function openExport(page: Page) {
 }
 
 test.describe('export (FR-11)', () => {
-  test('exports a self-contained HTML file (FR-11.1)', async ({ page }) => {
+  test('downloads an HTML file named from the document (FR-11.1)', async ({ page }) => {
+    // Content is asserted in the html-standalone unit test; here we verify the
+    // download wiring + filename derivation.
     const dialog = await openExport(page);
     const downloadPromise = page.waitForEvent('download');
     await dialog.getByTestId('export-html').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('doc.html');
-
-    const path = await download.path();
-    const html = await readFile(path, 'utf8');
-    // Self-contained: inlined typography + KaTeX CSS, rendered content.
-    expect(html).toContain('<!doctype html>');
-    expect(html).toContain('<article class="md-doc">');
-    expect(html).toContain('.md-doc {');
-    expect(html).toContain('.katex');
-    expect(html).toContain('<strong>world</strong>');
-    expect(html).toContain('<h1');
-    // No raw markdown tokens leaked into the HTML body.
-    expect(html).not.toContain('**world**');
+    await expect(dialog.getByTestId('export-status')).toContainText('doc.html');
   });
 
   test('copies rich text to the clipboard (FR-11.3)', async ({ page, browserName, context }) => {

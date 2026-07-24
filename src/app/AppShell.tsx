@@ -13,6 +13,8 @@ import { WelcomeScreen } from '@/features/files/WelcomeScreen';
 import { ExportPanel } from '@/features/export/ExportPanel';
 import { MetadataPanel } from '@/features/metadata/MetadataPanel';
 import { Outline } from '@/features/outline/Outline';
+import { HistoryPanel } from '@/features/snapshots/HistoryPanel';
+import { startSnapshotScheduler } from '@/features/snapshots/snapshots';
 
 const MODE_SHORTCUTS: Record<string, EditorMode> = {
   Digit1: 'raw',
@@ -89,6 +91,7 @@ export function AppShell() {
   useLeaveWarning();
   useFileDrop();
   useEffect(() => startDraftGuard(), []);
+  useEffect(() => startSnapshotScheduler(), []);
 
   return (
     <div className="flex h-full flex-col">
@@ -109,6 +112,7 @@ export function AppShell() {
       <Notices />
       <MetadataPanel />
       <ExportPanel />
+      <HistoryPanel />
     </div>
   );
 }
