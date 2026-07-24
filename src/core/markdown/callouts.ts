@@ -1,4 +1,4 @@
-import type { Blockquote, Paragraph, Root, Text } from 'mdast';
+import type { Blockquote, Paragraph, Root, RootContent, Text } from 'mdast';
 import { visit } from 'unist-util-visit';
 
 /**
@@ -43,6 +43,61 @@ export function blockquoteCalloutMarker(node: Blockquote): CalloutMarker | null 
   return parseCalloutMarker(firstChild.value);
 }
 
+/** Remove the `[!TYPE] title` marker text from a callout blockquote's children (mutates). */
+export function stripCalloutMarker(node: Blockquote, marker: CalloutMarker): void {
+  const firstParagraph = node.children[0] as Paragraph;
+  const firstText = firstParagraph.children[0] as Text;
+
+  const remainder = firstText.value.slice(marker.consumed).replace(/^\n/, '');
+  if (remainder) {
+    firstText.value = remainder;
+  } else {
+    firstParagraph.children.shift();
+    // A marker-only line may leave a leading break node behind.
+    if (firstParagraph.children[0]?.type === 'break') firstParagraph.children.shift();
+    if (firstParagraph.children.length === 0) node.children.shift();
+  }
+}
+
+/**
+ * Custom mdast node produced by `remarkCalloutNodes` for the WYSIWYG parse
+ * path. Never appears in serializer output — the Milkdown callout node
+ * serializes back to a plain blockquote with the marker text.
+ */
+export interface CalloutMdast {
+  type: 'callout';
+  calloutType: CalloutType;
+  title: string;
+  children: RootContent[];
+}
+
+/**
+ * remark transform for the WYSIWYG (Milkdown) parse path: blockquote callouts
+ * become first-class `callout` mdast nodes that the custom ProseMirror node
+ * schema picks up (FR-5.10).
+ */
+export function remarkCalloutNodes() {
+  return (tree: Root) => {
+    visit(tree, 'blockquote', (node: Blockquote, index, parent) => {
+      if (!parent || index === undefined) return;
+      const marker = blockquoteCalloutMarker(node);
+      if (!marker) return;
+
+      stripCalloutMarker(node, marker);
+      const callout: CalloutMdast = {
+        type: 'callout',
+        calloutType: marker.type,
+        title: marker.title,
+        children: node.children,
+      };
+      parent.children[index] = callout as unknown as RootContent;
+      // Revisit at the same index so nested blockquotes inside the callout
+      // body get transformed too.
+      return index;
+    });
+  };
+}
+
 /**
  * remark transform for the preview pipeline: blockquote callouts become
  * `<div class="callout callout-<type>">` with a styled title row.
@@ -53,19 +108,7 @@ export function remarkCallouts() {
       const marker = blockquoteCalloutMarker(node);
       if (!marker) return;
 
-      const firstParagraph = node.children[0] as Paragraph;
-      const firstText = firstParagraph.children[0] as Text;
-
-      // Strip the marker from the content.
-      const remainder = firstText.value.slice(marker.consumed).replace(/^\n/, '');
-      if (remainder) {
-        firstText.value = remainder;
-      } else {
-        firstParagraph.children.shift();
-        // A marker-only line may leave a leading break node behind.
-        if (firstParagraph.children[0]?.type === 'break') firstParagraph.children.shift();
-        if (firstParagraph.children.length === 0) node.children.shift();
-      }
+      stripCalloutMarker(node, marker);
 
       const title: Paragraph = {
         type: 'paragraph',

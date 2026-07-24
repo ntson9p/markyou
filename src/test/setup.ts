@@ -48,3 +48,29 @@ if (typeof window !== 'undefined') {
     Element.prototype.scrollIntoView = () => {};
   }
 }
+
+// ProseMirror's EditorView needs Range geometry APIs jsdom doesn't implement.
+if (typeof window !== 'undefined' && typeof Range !== 'undefined') {
+  const zeroRect = (): DOMRect => ({
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+  });
+  if (!Range.prototype.getClientRects) {
+    Range.prototype.getClientRects = () =>
+      ({
+        length: 0,
+        item: () => null,
+        [Symbol.iterator]: [][Symbol.iterator],
+      }) as unknown as DOMRectList;
+  }
+  if (!Range.prototype.getBoundingClientRect) {
+    Range.prototype.getBoundingClientRect = zeroRect;
+  }
+}
