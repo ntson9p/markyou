@@ -1,8 +1,10 @@
 import { Suspense, lazy } from 'react';
 import { Loader2 } from 'lucide-react';
 
+import { EditorCrashFallback } from '@/app/ErrorFallbacks';
 import { useIsSmallScreen } from '@/app/useMediaQuery';
 import { useUiStore } from '@/app/store/ui';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Editor engines are lazy chunks (initial-JS budget §7); the service worker
 // precaches them, so offline use and mode switches stay instant.
@@ -37,5 +39,14 @@ export function EditorArea() {
       <DualMode />
     );
 
-  return <Suspense fallback={<PaneLoader />}>{pane}</Suspense>;
+  // Key the boundary by mode so switching modes clears a crashed pane; the
+  // shell (menu, save, mode switcher) keeps working around it.
+  return (
+    <ErrorBoundary
+      key={effectiveMode}
+      fallback={(error, reset) => <EditorCrashFallback error={error} reset={reset} />}
+    >
+      <Suspense fallback={<PaneLoader />}>{pane}</Suspense>
+    </ErrorBoundary>
+  );
 }

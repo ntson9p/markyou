@@ -49,4 +49,21 @@ test.describe('keyboard operability (§a11y, WCAG 2.1.1)', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
   });
+
+  test('Ctrl+/ opens the searchable keyboard-shortcuts sheet (§8.3)', async ({ page }) => {
+    await openWysiwyg(page, '# Doc\n');
+
+    await page.keyboard.press('ControlOrMeta+/');
+    const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Find / Replace')).toBeVisible();
+
+    // The filter narrows the visible shortcuts.
+    await page.getByTestId('shortcuts-filter').fill('bold');
+    await expect(dialog.getByText('Bold / Italic / Strikethrough')).toBeVisible();
+    await expect(dialog.getByText('Find / Replace')).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  });
 });

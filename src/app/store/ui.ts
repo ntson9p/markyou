@@ -27,8 +27,8 @@ interface UiState {
   cursor: { line: number; col: number } | null;
   setCursor: (cursor: { line: number; col: number } | null) => void;
 
-  /** The open modal panel (metadata/history/export/settings), if any; not persisted. */
-  activePanel: 'metadata' | 'history' | 'export' | 'settings' | null;
+  /** The open modal panel (metadata/history/export/settings/shortcuts), if any; not persisted. */
+  activePanel: 'metadata' | 'history' | 'export' | 'settings' | 'shortcuts' | null;
   setActivePanel: (panel: UiState['activePanel']) => void;
 }
 

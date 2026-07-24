@@ -12,6 +12,7 @@ import { startDraftGuard } from '@/features/files/drafts';
 import { useFileDrop } from '@/features/files/useFileDrop';
 import { WelcomeScreen } from '@/features/files/WelcomeScreen';
 import { ExportPanel } from '@/features/export/ExportPanel';
+import { ShortcutsPanel } from '@/features/help/ShortcutsPanel';
 import { MetadataPanel } from '@/features/metadata/MetadataPanel';
 import { Outline } from '@/features/outline/Outline';
 import { HistoryPanel } from '@/features/snapshots/HistoryPanel';
@@ -46,6 +47,13 @@ function useGlobalShortcuts() {
       if (e.code === 'KeyO' && e.shiftKey && !e.altKey) {
         e.preventDefault();
         useUiStore.getState().toggleOutline();
+        return;
+      }
+      // Keyboard-shortcuts sheet (§8.3): Ctrl+/
+      if (e.code === 'Slash' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        const cur = useUiStore.getState().activePanel;
+        useUiStore.getState().setActivePanel(cur === 'shortcuts' ? null : 'shortcuts');
         return;
       }
       // File lifecycle (§8.3)
@@ -138,6 +146,7 @@ export function AppShell() {
       <MetadataPanel />
       <ExportPanel />
       <HistoryPanel />
+      <ShortcutsPanel />
     </div>
   );
 }
