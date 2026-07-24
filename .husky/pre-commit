@@ -1,0 +1,7 @@
+# Format staged source files with Prettier (lint-staged replacement;
+# the system git predates lint-staged's minimum version).
+files=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|css|json|mjs)$' | grep -v -E '^(package-lock\.json|tests/roundtrip/fixtures/)')
+if [ -n "$files" ]; then
+  npx prettier --write $files --ignore-unknown
+  git add $files
+fi
