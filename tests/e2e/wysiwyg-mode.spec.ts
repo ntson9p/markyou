@@ -103,7 +103,7 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     await expect(editor(page).locator('code')).toHaveText('shortcut target');
   });
 
-  test('table insert renders an editable table (FR-5.13)', async ({ page }) => {
+  test('table insert renders an editable table (FR-5.2, FR-5.7)', async ({ page }) => {
     await newWysiwygDoc(page);
     await page.getByRole('button', { name: 'Insert table' }).click();
     // The table-block component renders the content into `table.children`.
@@ -292,5 +292,79 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     await expect(page.getByTestId('status-save')).toContainText('Saved');
     const disk = await getFakeDisk(page);
     expect(disk['tasks.md']).toContain('- [x] buy milk');
+  });
+
+  test('link popover creates and edits links via Ctrl+K (FR-5.1, FR-5.2)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('visit here');
+    await page.keyboard.press('ControlOrMeta+a');
+
+    // Ctrl+K opens the link editor for the selection (create mode).
+    await page.keyboard.press('ControlOrMeta+k');
+    const input = page.locator('.milkdown-link-edit .input-area');
+    await expect(input).toBeVisible();
+    await input.fill('https://example.com');
+    await input.press('Enter');
+
+    const link = editor(page).locator('a[href="https://example.com"]');
+    await expect(link).toHaveText('visit here');
+    // No syntax leaked — the URL/brackets are not shown as text (FR-5.1).
+    await expect(editor(page)).not.toContainText('](');
+
+    // Caret inside the link + Ctrl+K re-opens in edit mode (FR-5.1 edit popover).
+    await link.click();
+    await page.keyboard.press('ControlOrMeta+k');
+    await expect(page.locator('.milkdown-link-edit .input-area')).toHaveValue(
+      'https://example.com',
+    );
+  });
+
+  test('copy/paste bridges rich text and markdown (FR-5.13)', async ({ page, browserName }) => {
+    // A ClipboardEvent with programmatically-constructed clipboardData is only
+    // honored by Chromium; Firefox nulls it out. The Milkdown clipboard plugin
+    // is engine-agnostic — only this synthetic driver is Chromium-bound, so we
+    // assert the rich↔markdown conversion on the Tier-1 browser.
+    test.skip(browserName === 'firefox', 'Firefox ignores synthetic clipboardData');
+    await newWysiwygDoc(page);
+
+    // Paste rich HTML (as from Docs/Word/web) → markdown-backed content.
+    await editor(page).evaluate((el) => {
+      const dt = new DataTransfer();
+      dt.setData(
+        'text/html',
+        '<p>Rich <strong>bold</strong> and <em>italic</em> and <a href="https://example.com">link</a>.</p>',
+      );
+      dt.setData('text/plain', 'Rich bold and italic and link.');
+      el.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }),
+      );
+    });
+
+    await expect(editor(page).locator('strong')).toHaveText('bold');
+    await expect(editor(page).locator('em')).toHaveText('italic');
+    await expect(editor(page).locator('a[href="https://example.com"]')).toHaveText('link');
+    await page.waitForTimeout(400); // WYSIWYG → store push debounce
+
+    // Switching to raw proves the paste produced markdown, not raw HTML (FR-5.13).
+    await page.keyboard.press('ControlOrMeta+Shift+Digit1');
+    const raw = page.locator('.cm-content');
+    await expect(raw).toContainText('**bold**');
+    await expect(raw).toContainText('*italic*');
+    await expect(raw).toContainText('[link](https://example.com)');
+
+    // Copying out offers both a markdown (text/plain) and a rich (text/html) flavor.
+    await page.keyboard.press('ControlOrMeta+Shift+Digit2'); // back to WYSIWYG
+    await expect(editor(page).locator('strong')).toHaveText('bold');
+    await editor(page).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    const flavors = await editor(page).evaluate((el) => {
+      const dt = new DataTransfer();
+      el.dispatchEvent(
+        new ClipboardEvent('copy', { clipboardData: dt, bubbles: true, cancelable: true }),
+      );
+      return { text: dt.getData('text/plain'), html: dt.getData('text/html') };
+    });
+    expect(flavors.text).toContain('**bold**');
+    expect(flavors.html).toContain('<strong>');
   });
 });
