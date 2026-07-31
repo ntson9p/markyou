@@ -637,7 +637,9 @@ body > div[data-show] .link-preview,
 
 .wysiwyg-root .milkdown-list-item-block .label-wrapper {
   display: inline-flex;
-  min-width: 1.25rem;
+  /* Fits `10.` without widening the column, so ordered items keep one content
+   * edge as the numbering crosses into two digits. */
+  min-width: 1.5rem;
   justify-content: center;
   color: var(--primary);
   cursor: pointer;
@@ -645,9 +647,56 @@ body > div[data-show] .link-preview,
   line-height: inherit;
 }
 
+/* Ordered markers hug the content column like native `ol` markers do, so
+ * `9.` and `10.` line up on the period instead of drifting apart. */
+.wysiwyg-root .ProseMirror ol > .milkdown-list-item-block .label-wrapper {
+  justify-content: flex-end;
+}
+
 .wysiwyg-root .milkdown-list-item-block .children {
   flex: 1;
   min-width: 0;
+}
+
+/* Marker↔content alignment. A native list item collapses its first child's
+ * top margin through the `li`, so the marker moves with the text; this flex
+ * row can't — `.md-doc p`'s 0.75em would push the content down and leave the
+ * marker floating above its own line. Zero the item's outer margins and carry
+ * item spacing on the wrapper instead (below), so the marker always sits on
+ * the first line. */
+.wysiwyg-root .milkdown-list-item-block .content-dom > :first-child {
+  margin-top: 0;
+}
+
+.wysiwyg-root .milkdown-list-item-block .content-dom > :last-child {
+  margin-bottom: 0;
+}
+
+/* Nested list inside an item — mirrors `.md-doc li > ul` (the nested list is
+ * not a direct `li` child here, so that rule can't reach it). */
+.wysiwyg-root .milkdown-list-item-block .content-dom > ul,
+.wysiwyg-root .milkdown-list-item-block .content-dom > ol {
+  margin-block: 0.25em;
+}
+
+/* Item spacing, now that the blocks inside an item no longer provide it.
+ * Tight lists get `.md-doc li`'s rhythm; `data-spread` mirrors the mdast
+ * `spread` flag, so loose lists keep the wider gap the preview renders for
+ * `<p>`-wrapped items (FR-4.4: preview is the styling reference). */
+.wysiwyg-root .ProseMirror li.list-item {
+  margin: 0;
+}
+
+.wysiwyg-root .ProseMirror :is(ul, ol) > .milkdown-list-item-block + .milkdown-list-item-block {
+  margin-top: 0.25em;
+}
+
+.wysiwyg-root
+  .ProseMirror
+  :is(ul, ol)[data-spread='true']
+  > .milkdown-list-item-block
+  + .milkdown-list-item-block {
+  margin-top: 0.75em;
 }
 
 /* Milkdown list-item component replaces list markers; hide native ones. */

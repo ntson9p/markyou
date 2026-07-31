@@ -96,6 +96,44 @@ test.describe('WYSIWYG UX polish (M4)', () => {
     await expect(editor(page).locator('blockquote')).toHaveCount(0);
   });
 
+  test('list markers sit on their item’s first line and share one column', async ({ page }) => {
+    await newWysiwygDoc(page);
+    // The list-item component renders marker and content as separate flex
+    // items, so nothing collapses the content block's own top margin — the
+    // marker used to float ~12px above its own text.
+    await page.keyboard.type('1. item 1');
+    for (let i = 2; i <= 10; i += 1) {
+      await page.keyboard.press('Enter');
+      await page.keyboard.type(`item ${i}`);
+    }
+    await expect(editor(page).locator('ol .milkdown-list-item-block')).toHaveCount(10);
+
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('ol > .milkdown-list-item-block')].map((wrapper) => {
+        const label = wrapper.querySelector('.label') as HTMLElement;
+        const firstBlock = wrapper.querySelector('.content-dom > *') as HTMLElement;
+        const range = document.createRange();
+        range.selectNodeContents(firstBlock);
+        const text = range.getBoundingClientRect();
+        const marker = label.getBoundingClientRect();
+        return {
+          label: label.textContent,
+          offset: (text.top + text.bottom) / 2 - (marker.top + marker.bottom) / 2,
+          markerRight: marker.right,
+          textLeft: text.left,
+        };
+      }),
+    );
+
+    for (const row of rows) {
+      // Marker and first line share a baseline (sub-pixel glyph metrics only).
+      expect(Math.abs(row.offset), `marker ${row.label} vertical offset`).toBeLessThanOrEqual(2);
+      // One content column and one marker edge, across the 9 → 10 digit change.
+      expect(row.textLeft).toBeCloseTo(rows[0].textLeft, 0);
+      expect(row.markerRight).toBeCloseTo(rows[0].markerRight, 0);
+    }
+  });
+
   test('block handle appears on hover and inserts a block below (FR-5.6)', async ({ page }) => {
     await newWysiwygDoc(page);
     await page.keyboard.type('First block');
