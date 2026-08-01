@@ -4,6 +4,18 @@ import { persist } from 'zustand/middleware';
 /** The three editing modes (FR-2.1). */
 export type EditorMode = 'raw' | 'wysiwyg' | 'dual';
 
+/**
+ * WYSIWYG page measure, in `ch` (§8.1: a centred Docs-like page). Stored in
+ * `ch` rather than pixels so the line length a user picks survives a font-size
+ * change (FR-13.3) — it is a typographic measure, not a box size.
+ */
+export const DEFAULT_MEASURE_CH = 72;
+export const MIN_MEASURE_CH = 40;
+export const MAX_MEASURE_CH = 160;
+
+export const clampMeasure = (ch: number) =>
+  Math.round(Math.min(MAX_MEASURE_CH, Math.max(MIN_MEASURE_CH, ch)));
+
 interface UiState {
   /** Default is WYSIWYG (D3); last-used mode persists per device (FR-2.3). */
   mode: EditorMode;
@@ -22,6 +34,11 @@ interface UiState {
   setRawSplit: (ratio: number) => void;
   dualSplit: number;
   setDualSplit: (ratio: number) => void;
+
+  /** WYSIWYG page width in `ch` (FR-2.3: layout sizes persist per device). */
+  wysiwygMeasure: number;
+  setWysiwygMeasure: (ch: number) => void;
+  resetWysiwygMeasure: () => void;
 
   /** Cursor position for the status bar (FR-10.3); not persisted. */
   cursor: { line: number; col: number } | null;
@@ -49,6 +66,10 @@ export const useUiStore = create<UiState>()(
       dualSplit: 0.5,
       setDualSplit: (dualSplit) => set({ dualSplit }),
 
+      wysiwygMeasure: DEFAULT_MEASURE_CH,
+      setWysiwygMeasure: (ch) => set({ wysiwygMeasure: clampMeasure(ch) }),
+      resetWysiwygMeasure: () => set({ wysiwygMeasure: DEFAULT_MEASURE_CH }),
+
       cursor: null,
       setCursor: (cursor) => set({ cursor }),
 
@@ -63,6 +84,7 @@ export const useUiStore = create<UiState>()(
         outlineVisible: state.outlineVisible,
         rawSplit: state.rawSplit,
         dualSplit: state.dualSplit,
+        wysiwygMeasure: state.wysiwygMeasure,
       }),
     },
   ),

@@ -1,3 +1,8 @@
+import { useRef } from 'react';
+
+import { useIsSmallScreen } from '@/app/useMediaQuery';
+import { useUiStore } from '@/app/store/ui';
+import { PageMeasureHandle } from '@/components/PageMeasureHandle';
 import { useDocStore } from '@/core/document/store';
 import { FindBar, useWysiwygFind } from '@/editors/wysiwyg/FindBar';
 import { WysiwygToolbar } from '@/editors/wysiwyg/Toolbar';
@@ -7,11 +12,19 @@ import { useWysiwygRegistration } from '@/editors/wysiwyg/useWysiwygRegistration
 import '@/styles/wysiwyg.css';
 
 /**
- * WYSIWYG single mode (§8.1): fixed toolbar + centered Docs-like page
- * (max measure ~72ch, generous whitespace).
+ * WYSIWYG single mode (§8.1): fixed toolbar + centered Docs-like page.
+ * The page measure defaults to 72ch and is user-resizable by dragging either
+ * edge (persisted per device, FR-2.3); `min()` keeps it inside the viewport
+ * whatever was persisted, so a narrow window never overflows.
  */
 export function WysiwygMode() {
   const docId = useDocStore((s) => s.docId);
+  const measure = useUiStore((s) => s.wysiwygMeasure);
+  const setMeasure = useUiStore((s) => s.setWysiwygMeasure);
+  const resetMeasure = useUiStore((s) => s.resetWysiwygMeasure);
+  const isSmall = useIsSmallScreen();
+  const pageRef = useRef<HTMLDivElement>(null);
+
   const { editor, selectionState, onEditorReady, onStateChange, registerScrollEl } =
     useWysiwygRegistration();
   const find = useWysiwygFind(() => true);
@@ -26,7 +39,25 @@ export function WysiwygMode() {
         ref={registerScrollEl}
         className="min-h-0 flex-1 overflow-y-auto bg-muted/30 motion-safe:scroll-smooth"
       >
-        <div className="mx-auto my-8 min-h-[70%] w-full max-w-[min(72ch,calc(100%-2rem))] rounded-lg border border-border/60 bg-background px-10 py-12 shadow-sm">
+        <div
+          ref={pageRef}
+          style={{ maxWidth: `min(${measure}ch, calc(100% - 2rem))` }}
+          className="relative mx-auto my-8 min-h-[70%] w-full rounded-lg border border-border/60 bg-background px-10 py-12 shadow-sm"
+          data-testid="wysiwyg-page"
+        >
+          {/* Resize affordances live in the gutter, clear of the text (§8.2:
+              small screens are full-width single pane, so no handles there). */}
+          {!isSmall &&
+            (['left', 'right'] as const).map((side) => (
+              <PageMeasureHandle
+                key={side}
+                side={side}
+                measure={measure}
+                onMeasureChange={setMeasure}
+                onReset={resetMeasure}
+                pageRef={pageRef}
+              />
+            ))}
           <WysiwygEditor key={docId} onEditorReady={onEditorReady} onStateChange={onStateChange} />
         </div>
       </div>

@@ -16,7 +16,8 @@ Your files stay yours: real `.md` files on disk, no server, no account, fully of
 - **GitHub-Flavored Markdown** plus tables, task lists, footnotes, callouts, KaTeX math, and
   Mermaid diagrams.
 - **WYSIWYG editing** with a selection bubble menu, `/` slash commands, block drag handles,
-  and rich↔markdown copy/paste.
+  and rich↔markdown copy/paste. Drag either page edge to set your own line measure
+  (double-click an edge to restore the 72-character default).
 - **No data loss:** continuous local drafts guard every keystroke; a recovery banner restores
   your work after a crash or tab close. Save in place on Chromium; "save a copy" elsewhere.
 - **Images:** paste or drop into either editor — written to an `assets/` folder as relative
