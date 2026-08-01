@@ -23,7 +23,15 @@ describe('buildStandaloneHtml (FR-11.1)', () => {
     // Survives the mermaid pass (which round-trips the HTML through a div).
     expect(html).toContain('<div class="md-table-scroll"><table');
     // …and prints in full rather than clipping at the scroll container.
-    expect(html).toContain('.md-table-scroll { overflow: visible; }');
+    expect(html).toMatch(/@media print[\s\S]*\.md-table-scroll[^{]*\{\s*overflow: visible;/);
+  });
+
+  it('prints a diagram scaled to the page rather than clipped at the scroller', async () => {
+    const html = await buildStandaloneHtml('Doc', 'text\n');
+    // Paper cannot scroll, so the natural-size floor that makes an over-wide
+    // diagram scroll on screen has to come off for print.
+    expect(html).toMatch(/@media print[\s\S]*\.mermaid-diagram[^{]*\{\s*overflow: visible;/);
+    expect(html).toContain('.mermaid-diagram svg { min-width: 0 !important; }');
   });
 
   it('escapes the document title', async () => {

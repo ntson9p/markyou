@@ -14,37 +14,46 @@ let renderSeq = 0;
 /**
  * How far past its natural width a diagram may be stretched to fill a column.
  *
- * A power of two keeps the doubled value exact in binary, so the rewritten cap
- * carries no float noise.
+ * A power of two keeps the scaled value exact in binary, so the rewritten
+ * bounds carry no float noise.
  */
 const MAX_UPSCALE = 2;
 
 /**
- * Only the cap inside the opening `<svg …>` tag: `[^>]` cannot cross out of
+ * Only the bound inside the opening `<svg …>` tag: `[^>]` cannot cross out of
  * the tag, so the `<style>` block mermaid inlines right after it — which has
  * `max-width` declarations of its own for HTML labels — is left alone.
  */
 const WIDTH_CAP = /^([^<]*<svg\b[^>]*?max-width:\s*)(\d+(?:\.\d+)?)px/i;
 
 /**
- * Widen mermaid's self-imposed width cap.
+ * Rewrite mermaid's width bounds so a diagram sizes to the column it lands in.
  *
  * Every diagram type ships `width="100%"` plus an inline
- * `style="max-width:<layout width>px"` (its `useMaxWidth` default): fill the
- * container, but never grow past whatever width mermaid's own text metrics
- * produced. That width is unrelated to our column, so a diagram stalls partway
- * across a wide page — and an inline style outranks every stylesheet rule, so
- * CSS cannot raise the cap.
+ * `style="max-width:<natural layout width>px"` (its `useMaxWidth` default).
+ * On its own that reads "fill the container, but never exceed the width my own
+ * text metrics produced" — and being inline it outranks every stylesheet rule.
+ * The result is wrong at both ends: the diagram stalls partway across a widened
+ * page, and in a column narrower than its natural width it is squeezed below
+ * legibility. In a 72ch column this diagram's 16 px labels painted at 11.5 px,
+ * noticeably smaller than the prose beside them.
  *
- * Lifting the cap to a bounded multiple rather than dropping it keeps the
- * useful half of mermaid's rule: a diagram fills a column up to `MAX_UPSCALE`×
- * its natural width, while a two-node graph (85 px wide) still can't be
- * inflated to span a 1200 px page.
+ * The rewritten bounds clamp rather than only cap:
+ *
+ *     width = clamp(natural, column, MAX_UPSCALE × natural)
+ *
+ * So a diagram fills a widened page; it holds its natural size — and therefore
+ * its type size — in a column too narrow for it, leaving the surrounding
+ * scroll container to take over (the same bargain as an over-wide table); and
+ * a two-node graph is never inflated to span a 1200 px page.
+ *
+ * Applied once, at the single render choke point, so every surface agrees.
  */
-export function liftWidthCap(svg: string): string {
+export function fitDiagramWidth(svg: string): string {
   return svg.replace(WIDTH_CAP, (whole, head: string, px: string) => {
     const natural = Number.parseFloat(px);
-    return natural > 0 ? `${head}${natural * MAX_UPSCALE}px` : whole;
+    if (natural <= 0) return whole;
+    return `${head}${natural * MAX_UPSCALE}px; min-width: ${natural}px`;
   });
 }
 
@@ -67,7 +76,7 @@ export async function renderMermaidToSvg(code: string, dark: boolean): Promise<s
   const { svg } = await mermaid.render(`mermaid-${++renderSeq}`, code);
   // Cache the fitted markup: every consumer (WYSIWYG node view, preview,
   // export, the editor modal) wants the same sizing, and none can forget it.
-  const fitted = liftWidthCap(svg);
+  const fitted = fitDiagramWidth(svg);
   svgCache.set(key, fitted);
   if (svgCache.size > 100) {
     const first = svgCache.keys().next().value;

@@ -314,15 +314,20 @@
 }
 
 /* Mermaid diagrams */
+/* A plain block, not a flex row: `justify-content: center` leaves the left
+   edge of an over-wide diagram outside the scroll range, unreachable. */
 .md-doc .mermaid-diagram {
-  display: flex;
-  justify-content: center;
+  overflow-x: auto;
   margin: 1em 0;
 }
-/* Width is capped inline by mermaid and rewritten by `liftWidthCap`
-   (editors/preview/mermaid.ts); a rule here would never win the cascade. */
+/* No width bounds here: mermaid stamps its own inline, which outrank any rule
+   we could write. `fitDiagramWidth` (editors/preview/mermaid.ts) owns them.
+   `display: block` is explicit because the standalone export ships this file
+   without a CSS reset, where an `svg` would otherwise stay inline. */
 .md-doc .mermaid-diagram svg {
+  display: block;
   height: auto;
+  margin: 0 auto;
 }
 .md-doc .mermaid-error {
   color: var(--doc-mark-caution);

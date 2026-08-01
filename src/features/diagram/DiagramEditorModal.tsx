@@ -145,8 +145,11 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           data-testid="diagram-preview"
           aria-label="Diagram preview"
           aria-live="polite"
-          // No `max-w-full`: mermaid's inline cap outranks it. See liftWidthCap.
-          className="flex min-h-full items-center justify-center p-4 [&_svg]:h-auto"
+          // No width bounds here — mermaid's inline ones outrank them; see
+          // fitDiagramWidth. Centring is `mx-auto` on the diagram rather than
+          // `justify-center`, which would put the left edge of an over-wide
+          // one outside the scroll range.
+          className="flex min-h-full items-center p-4 [&_svg]:mx-auto [&_svg]:h-auto"
         />
       </div>
       {error && (

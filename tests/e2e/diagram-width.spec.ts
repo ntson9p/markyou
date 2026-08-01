@@ -3,14 +3,16 @@ import { expect, test, type Page } from '@playwright/test';
 import { pinMode, seedFakeFile, stubFsa } from './helpers';
 
 /**
- * Mermaid diagrams fill their column (FR-5.9).
+ * Mermaid diagrams size to their column (FR-5.9).
  *
  * Mermaid stamps `width="100%"` plus an inline `style="max-width:<natural
- * layout width>px"` on every diagram it renders. The cap has nothing to do
- * with our column, and being inline it beats any stylesheet rule — so a
- * diagram used to stop growing partway across a widened page. `liftWidthCap`
- * rewrites the cap to twice the natural width: wide enough to fill a page,
- * tight enough that a two-node graph is not blown up to span it.
+ * layout width>px"` on every diagram, and an inline style beats any rule we
+ * could write. That bound is wrong at both ends: the diagram stalls partway
+ * across a widened page, and in a column narrower than its natural width it is
+ * squeezed below legibility — 16px labels painting at 11.5px next to 16px
+ * prose. `fitDiagramWidth` rewrites the bounds to clamp instead:
+ *
+ *     width = clamp(natural, column, 2 × natural)
  */
 
 const WIDE = [
@@ -59,29 +61,35 @@ async function open(page: Page, mode: 'wysiwyg' | 'raw', measure?: number) {
   await page.getByTestId('welcome-open').click();
 }
 
-/** Per-diagram geometry: rendered width, the room it had, and its own cap. */
+/** Rendered width, the room it had, its bounds, and how its host scrolls. */
 async function scan(page: Page, hostSelector: string) {
   return page.evaluate((sel) => {
+    const bound = (style: string, prop: string) =>
+      Number.parseFloat(new RegExp(`(?:^|;)\\s*${prop}:\\s*([\\d.]+)px`).exec(style)?.[1] ?? 'NaN');
     return [...document.querySelectorAll<HTMLElement>(sel)].map((host) => {
       const svg = host.querySelector('svg')!;
-      const style = getComputedStyle(host);
+      const css = getComputedStyle(host);
+      const inline = svg.getAttribute('style') ?? '';
       const viewBox = (svg.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
       return {
         width: Math.round(svg.getBoundingClientRect().width),
         available: Math.round(
           host.clientWidth -
-            Number.parseFloat(style.paddingLeft) -
-            Number.parseFloat(style.paddingRight),
+            Number.parseFloat(css.paddingLeft) -
+            Number.parseFloat(css.paddingRight),
         ),
         natural: viewBox[2],
-        cap: Number.parseFloat(/max-width:\s*([\d.]+)px/.exec(svg.getAttribute('style') ?? '')![1]),
+        ceiling: bound(inline, 'max-width'),
+        floor: bound(inline, 'min-width'),
+        scrollX: host.scrollWidth - host.clientWidth,
+        scrollY: host.scrollHeight - host.clientHeight,
       };
     });
   }, hostSelector);
 }
 
 test.describe('mermaid diagram width (FR-5.9)', () => {
-  test('a wide diagram fills the page and follows the page measure', async ({ page }) => {
+  test('a wide diagram fills a widened page and follows the measure', async ({ page }) => {
     await open(page, 'wysiwyg', 160);
     // Mermaid is a lazy chunk; both diagrams resolve once it loads.
     await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
@@ -91,13 +99,36 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     // stopped at `natural` and left the rest of the page empty.
     expect(wide.available).toBeGreaterThan(wide.natural);
     expect(wide.width).toBeCloseTo(wide.available, -1);
+    expect(wide.scrollX).toBe(0); // nothing to scroll when it fits
 
     // Narrow the measure: the diagram follows it back down.
     await page.getByTestId('page-measure-right').focus();
-    for (let i = 0; i < 16; i += 1) await page.keyboard.press('ArrowLeft'); // 160 → 96ch
+    for (let i = 0; i < 8; i += 1) await page.keyboard.press('ArrowLeft'); // 160 → 128ch
     const [narrowed] = await scan(page, '.diagram-node');
     expect(narrowed.available).toBeLessThan(wide.available);
+    expect(narrowed.available).toBeGreaterThan(narrowed.natural); // still room to fill
     expect(narrowed.width).toBeCloseTo(narrowed.available, -1);
+  });
+
+  test('a diagram too wide for the column keeps its natural size and scrolls', async ({ page }) => {
+    await open(page, 'wysiwyg', 72); // the default measure, narrower than the diagram
+    await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
+
+    const [wide] = await scan(page, '.diagram-node');
+    expect(wide.available).toBeLessThan(wide.natural);
+    // Holds natural size — shrinking to 0.72× is what made the labels smaller
+    // than the prose beside them.
+    expect(wide.width).toBe(Math.round(wide.natural));
+    expect(wide.scrollX).toBeGreaterThan(0);
+    // Scrolling sideways must not also make it scroll vertically.
+    expect(wide.scrollY).toBe(0);
+
+    // The overflow is contained: the document itself does not scroll sideways.
+    const columnOverflow = await page.evaluate(() => {
+      const pm = document.querySelector('.ProseMirror') as HTMLElement;
+      return pm.scrollWidth - pm.clientWidth;
+    });
+    expect(columnOverflow).toBeLessThanOrEqual(1);
   });
 
   test('a two-node diagram is not inflated to span the column', async ({ page }) => {
@@ -105,38 +136,22 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
 
     const [, tiny] = await scan(page, '.diagram-node');
-    // Room to grow, deliberately not taken beyond the cap.
+    // Room to grow, deliberately not all taken.
     expect(tiny.available).toBeGreaterThan(tiny.natural * 4);
     expect(tiny.width).toBeLessThanOrEqual(Math.ceil(tiny.natural * 2) + 1);
     expect(tiny.width).toBeLessThan(tiny.available / 3);
   });
 
-  test('the cap is lifted, not removed', async ({ page }) => {
+  test('the bounds clamp: a floor at natural, a ceiling at twice it', async ({ page }) => {
     await open(page, 'wysiwyg', 160);
     await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
 
-    // Every diagram keeps a bounded cap at exactly twice its natural width —
-    // dropping the cap entirely is what would inflate the small one.
+    // Dropping the ceiling would inflate the small diagram; dropping the floor
+    // is what let a wide one be squeezed below its type size.
     for (const d of await scan(page, '.diagram-node')) {
-      expect(d.cap).toBeCloseTo(d.natural * 2, 3);
+      expect(d.floor).toBeCloseTo(d.natural, 3);
+      expect(d.ceiling).toBeCloseTo(d.natural * 2, 3);
     }
-  });
-
-  test('a diagram narrower than the column never overflows it', async ({ page }) => {
-    await open(page, 'wysiwyg', 72); // default: narrower than the wide diagram
-    await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
-
-    const [wide] = await scan(page, '.diagram-node');
-    expect(wide.available).toBeLessThan(wide.natural); // must scale down to fit
-    expect(wide.width).toBeLessThanOrEqual(wide.available + 1);
-
-    // Measured on the content column: the page's own box overflows by design,
-    // the measure handles living in the gutter either side of it.
-    const overflow = await page.evaluate(() => {
-      const pm = document.querySelector('.ProseMirror') as HTMLElement;
-      return pm.scrollWidth - pm.clientWidth;
-    });
-    expect(overflow).toBeLessThanOrEqual(1);
   });
 
   test('the preview shares the same sizing', async ({ page }) => {
@@ -144,12 +159,19 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     await expect(page.locator('.md-doc .mermaid-diagram svg')).toHaveCount(2, { timeout: 30000 });
 
     const [wide, tiny] = await scan(page, '.md-doc .mermaid-diagram');
-    // The preview column is fixed at 72ch — narrower than the wide diagram, so
-    // it fills either way. The lifted cap is what proves the shared render
-    // path (and not per-surface CSS) is doing the work here too.
-    expect(wide.cap).toBeCloseTo(wide.natural * 2, 3);
-    expect(wide.width).toBeCloseTo(wide.available, -1);
+    // The preview column is fixed at 72ch, so the wide diagram overflows it and
+    // scrolls in its own wrapper rather than shrinking…
+    expect(wide.available).toBeLessThan(wide.natural);
+    expect(wide.width).toBe(Math.round(wide.natural));
+    expect(wide.scrollX).toBeGreaterThan(0);
     // …and the small one is still left alone.
     expect(tiny.width).toBeLessThanOrEqual(Math.ceil(tiny.natural * 2) + 1);
+
+    // The article must not be pushed sideways by either.
+    const docOverflow = await page.evaluate(() => {
+      const doc = document.querySelector('.md-doc') as HTMLElement;
+      return doc.scrollWidth - doc.clientWidth;
+    });
+    expect(docOverflow).toBeLessThanOrEqual(1);
   });
 });

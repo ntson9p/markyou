@@ -81,14 +81,20 @@
   border-radius: 0.5rem;
   cursor: pointer;
   text-align: center;
+  /* A diagram too wide for the column keeps its natural size and scrolls here,
+     the same bargain as an over-wide table: shrinking it to fit is what left
+     its labels smaller than the prose around them. */
+  overflow-x: auto;
 }
 
 .diagram-node:hover {
   border-color: var(--border);
 }
 
-/* No `max-width` here: mermaid stamps its own cap inline, which outranks any
-   rule we could write. `liftWidthCap` (editors/preview/mermaid.ts) owns it. */
+/* No width bounds here: mermaid stamps its own inline, which outrank any rule
+   we could write. `fitDiagramWidth` (editors/preview/mermaid.ts) owns them.
+   `margin: 0 auto` centres a diagram that fits and collapses to 0 for one that
+   doesn't, so an over-wide diagram stays reachable from the scroll origin. */
 .diagram-node svg {
   margin: 0 auto;
 }
