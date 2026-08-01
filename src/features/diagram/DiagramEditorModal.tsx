@@ -5,7 +5,7 @@ import { useUiStore } from '@/app/store/ui';
 import { SplitPane } from '@/components/SplitPane';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { renderMermaidToSvg } from '@/editors/preview/mermaid';
+import { refitOversizedCanvas, renderMermaidToSvg } from '@/editors/preview/mermaid';
 import { useDiagramEditorStore, type DiagramEditorSession } from '@/features/diagram/store';
 import { useResolvedTheme } from '@/features/settings/theme';
 
@@ -73,7 +73,10 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           if (renderSeq.current !== id) return;
           // Generated locally by mermaid with securityLevel:'strict' — no
           // document-provided HTML is injected (§7 security).
-          if (previewRef.current) previewRef.current.innerHTML = svg;
+          if (previewRef.current) {
+            previewRef.current.innerHTML = svg;
+            refitOversizedCanvas(previewRef.current);
+          }
           setError(null);
         })
         .catch((err: unknown) => {

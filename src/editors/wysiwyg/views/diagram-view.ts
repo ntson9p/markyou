@@ -1,7 +1,7 @@
 import { $view } from '@milkdown/kit/utils';
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view';
 
-import { renderMermaidToSvg } from '@/editors/preview/mermaid';
+import { refitWhenAttached, renderMermaidToSvg } from '@/editors/preview/mermaid';
 import { openDiagramEditor } from '@/features/diagram/store';
 
 import { diagramSchema } from '../nodes/diagram';
@@ -13,6 +13,68 @@ import { diagramSchema } from '../nodes/diagram';
 
 function isDark(): boolean {
   return document.documentElement.classList.contains('dark');
+}
+
+/**
+ * TEMPORARY diagnostic — REMOVE once the diagram-sizing report is closed.
+ *
+ * Prints the numbers that separate "mermaid produced a tiny drawing" from
+ * "our layout shrank a correctly-sized one", so the answer can be read off a
+ * screenshot instead of a console session.
+ */
+const DEBUG_DIAGRAM_SIZE = true;
+
+function boxOf(node: Element): DOMRect | null {
+  try {
+    return (node as SVGGraphicsElement).getBBox();
+  } catch {
+    return null;
+  }
+}
+
+function describe(node: Element, box: DOMRect): string {
+  const cls = (node.getAttribute('class') ?? '').split(/\s+/)[0] || '-';
+  const id = node.getAttribute('id') ?? '';
+  return (
+    `${node.tagName}.${cls}${id ? `#${id.slice(0, 14)}` : ''} ` +
+    `${Math.round(box.width)}x${Math.round(box.height)}@${Math.round(box.x)},${Math.round(box.y)}`
+  );
+}
+
+function appendSizeBadge(el: HTMLElement): void {
+  if (!DEBUG_DIAGRAM_SIZE) return;
+  const svg = el.querySelector('svg');
+  if (!svg) return;
+  // After layout, so the measured boxes are the real ones.
+  requestAnimationFrame(() => {
+    if (!svg.isConnected) return;
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.getAttribute('viewBox') ?? '(none)';
+    const natural = Number.parseFloat(viewBox.split(/\s+/)[2] ?? 'NaN');
+    const scale = Number.isFinite(natural) ? rect.width / natural : 1;
+    const content = boxOf(svg);
+
+    // Quiet unless the canvas is still bigger than the drawing after repair.
+    // A low scale on its own is not a fault — a large diagram in a narrow
+    // column is legitimately scaled well below 1.
+    const stillOversized =
+      content !== null &&
+      content.width > 0 &&
+      Number.isFinite(natural) &&
+      natural >= content.width * 4;
+    if (!stillOversized) return;
+
+    const badge = document.createElement('div');
+    badge.className = 'diagram-debug-badge';
+    badge.textContent = [
+      `viewBox: ${viewBox}`,
+      `drawn: ${Math.round(rect.width)}x${Math.round(rect.height)}`,
+      `col: ${el.clientWidth}`,
+      `scale: ${scale.toFixed(3)}`,
+      `content: ${content ? describe(svg, content) : 'unmeasurable'}`,
+    ].join('  |  ');
+    el.appendChild(badge);
+  });
 }
 
 async function renderDiagram(el: HTMLElement, code: string): Promise<void> {
@@ -27,6 +89,8 @@ async function renderDiagram(el: HTMLElement, code: string): Promise<void> {
   try {
     // Rendered locally with securityLevel:'strict'; no document HTML injected.
     el.innerHTML = await renderMermaidToSvg(code, isDark());
+    refitWhenAttached(el);
+    appendSizeBadge(el);
   } catch (err) {
     el.innerHTML = '';
     const error = document.createElement('div');
