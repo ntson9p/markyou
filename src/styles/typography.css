@@ -226,11 +226,27 @@
 }
 
 /* ---------- Tables (GFM) ---------- */
+
+/* A real table box, so `width: 100%` applies and a table tracks the width of
+ * its column. `display: block` — the usual trick for making a table scroll —
+ * would leave the rows in an anonymous shrink-to-fit table box inside a
+ * full-width block, i.e. `width: 100%` silently does nothing. Horizontal
+ * scrolling belongs to the wrapper below instead. */
 .md-doc table {
   border-collapse: collapse;
   width: 100%;
-  display: block;
+}
+
+/* Per-table scroll container: `rehypeTableScroll` adds it in the preview /
+ * export pipeline, and the WYSIWYG NodeView brings its own `.table-wrapper`.
+ * A table wider than its column scrolls here rather than pushing the whole
+ * document sideways. */
+.md-doc .md-table-scroll {
   overflow-x: auto;
+  margin: 0.75em 0;
+}
+.md-doc .md-table-scroll > table {
+  margin: 0;
 }
 .md-doc th,
 .md-doc td {

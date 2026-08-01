@@ -12,7 +12,10 @@ const PAGE_CSS = `
   @page { margin: 1.8cm; }
   @media print {
     .md-doc { margin: 0; max-width: none; padding: 0; }
-    pre, table, blockquote, .callout, .mermaid-diagram, figure, img { break-inside: avoid; }
+    /* A scroll container clips on paper instead of scrolling — let a wide
+       table print in full (overflowing the page beats losing columns). */
+    .md-table-scroll { overflow: visible; }
+    pre, table, .md-table-scroll, blockquote, .callout, .mermaid-diagram, figure, img { break-inside: avoid; }
     h1, h2, h3, h4 { break-after: avoid; }
     a { color: inherit; text-decoration: underline; }
   }

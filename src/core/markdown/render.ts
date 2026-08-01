@@ -15,6 +15,7 @@ import { unified } from 'unified';
 import { remarkCallouts } from '@/core/markdown/callouts';
 import { sanitizeSchema } from '@/core/markdown/sanitize-schema';
 import { rehypeSourcepos } from '@/core/markdown/sourcepos';
+import { rehypeTableScroll } from '@/core/markdown/table-scroll';
 
 /**
  * The shared render pipeline (FR-4.1): markdown body → sanitized HTML.
@@ -25,7 +26,8 @@ import { rehypeSourcepos } from '@/core/markdown/sourcepos';
  *  2. remark-rehype with raw HTML passed through…
  *  3. …parsed by rehype-raw, then *sanitized* (allowlist schema),
  *  4. highlight + KaTeX run after sanitize on locally-generated output,
- *  5. sourcepos stamps for scroll sync.
+ *  5. sourcepos stamps for scroll sync,
+ *  6. table scroll wrappers — after the stamps, so anchors stay on the tables.
  */
 const renderProcessor = unified()
   .use(remarkParse)
@@ -39,6 +41,7 @@ const renderProcessor = unified()
   .use(rehypeHighlight, { detect: false })
   .use(rehypeKatex, { errorColor: 'var(--destructive)' })
   .use(rehypeSourcepos)
+  .use(rehypeTableScroll)
   .use(rehypeStringify);
 
 /** Render a markdown body to sanitized HTML. */

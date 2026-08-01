@@ -14,6 +14,28 @@ describe('shared render pipeline (FR-4.1, §6)', () => {
     expect(html).toContain('align="right"');
   });
 
+  it('wraps tables in a scroll container, keeping the sourcepos stamp on the table', async () => {
+    const html = await renderMarkdown('para\n\n| a | b |\n| - | - |\n| 1 | 2 |');
+    // The wrapper carries the overflow; the table itself stays a table box so
+    // `width: 100%` tracks the column width.
+    expect(html).toContain('<div class="md-table-scroll"><table');
+    // Scroll-sync anchors must stay on the table, and the wrapper must not
+    // duplicate the anchor for the same source line.
+    expect(html).toMatch(/<table[^>]*data-sourcepos="3"/);
+    expect(html).not.toMatch(/<div class="md-table-scroll"[^>]*data-sourcepos/);
+    // One wrapper per table — the visitor must not re-enter what it wrapped.
+    expect(html.match(/md-table-scroll/g)).toHaveLength(1);
+  });
+
+  it('wraps every table, including one nested in a blockquote', async () => {
+    const html = await renderMarkdown('> | a |\n> | - |\n> | 1 |\n\n| b |\n| - |\n| 2 |\n');
+    expect(html.match(/md-table-scroll/g)).toHaveLength(2);
+    // The nested table is wrapped in place, inside the blockquote.
+    expect(html).toMatch(
+      /<blockquote[^>]*>[\s\S]*<div class="md-table-scroll"><table[\s\S]*<\/blockquote>/,
+    );
+  });
+
   it('renders task lists as checkboxes (read-only in preview)', async () => {
     const html = await renderMarkdown('- [ ] todo\n- [x] done');
     expect(html).toContain('type="checkbox"');
