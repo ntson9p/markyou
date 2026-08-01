@@ -81,22 +81,20 @@
   border-radius: 0.5rem;
   cursor: pointer;
   text-align: center;
-  /* A diagram too wide for the column keeps its natural size and scrolls here,
-     the same bargain as an over-wide table: shrinking it to fit is what left
-     its labels smaller than the prose around them. */
-  overflow-x: auto;
 }
 
 .diagram-node:hover {
   border-color: var(--border);
 }
 
-/* No width bounds here: mermaid stamps its own inline, which outrank any rule
-   we could write. `fitDiagramWidth` (editors/preview/mermaid.ts) owns them.
-   `margin: 0 auto` centres a diagram that fits and collapses to 0 for one that
-   doesn't, so an over-wide diagram stays reachable from the scroll origin. */
+/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
+   the column, never scales up past natural size. `max-height` is the matching
+   guard on the other axis — an SVG carries an intrinsic ratio, so capping the
+   height *scales* a very tall diagram down rather than clipping it or nesting
+   a scrollbar inside a page that already scrolls. */
 .diagram-node svg {
   margin: 0 auto;
+  max-height: 70vh;
 }
 
 /* ---------- raw HTML chips (FR-5.11) ---------- */

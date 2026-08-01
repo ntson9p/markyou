@@ -12,57 +12,28 @@ const svgCache = new Map<string, string>();
 let renderSeq = 0;
 
 /**
- * How far past its natural width a diagram may be stretched to fill a column.
- *
- * A power of two keeps the scaled value exact in binary, so the rewritten
- * bounds carry no float noise.
+ * Mermaid frames a flowchart in 8 px of blank margin on every side. Measured on
+ * a typical diagram that is 16 px of a 713 px viewBox — 2.2% of the width spent
+ * on nothing. Trimming it to 2 px keeps a hair of slack for edge strokes and
+ * marker arrowheads, which `getBBox` includes but antialiasing can still shave.
  */
-const MAX_UPSCALE = 2;
-
-/**
- * Only the bound inside the opening `<svg …>` tag: `[^>]` cannot cross out of
- * the tag, so the `<style>` block mermaid inlines right after it — which has
- * `max-width` declarations of its own for HTML labels — is left alone.
- */
-const WIDTH_CAP = /^([^<]*<svg\b[^>]*?max-width:\s*)(\d+(?:\.\d+)?)px/i;
-
-/**
- * Rewrite mermaid's width bounds so a diagram sizes to the column it lands in.
- *
- * Every diagram type ships `width="100%"` plus an inline
- * `style="max-width:<natural layout width>px"` (its `useMaxWidth` default).
- * On its own that reads "fill the container, but never exceed the width my own
- * text metrics produced" — and being inline it outranks every stylesheet rule.
- * The result is wrong at both ends: the diagram stalls partway across a widened
- * page, and in a column narrower than its natural width it is squeezed below
- * legibility. In a 72ch column this diagram's 16 px labels painted at 11.5 px,
- * noticeably smaller than the prose beside them.
- *
- * The rewritten bounds clamp rather than only cap:
- *
- *     width = clamp(natural, column, MAX_UPSCALE × natural)
- *
- * So a diagram fills a widened page; it holds its natural size — and therefore
- * its type size — in a column too narrow for it, leaving the surrounding
- * scroll container to take over (the same bargain as an over-wide table); and
- * a two-node graph is never inflated to span a 1200 px page.
- *
- * Applied once, at the single render choke point, so every surface agrees.
- */
-export function fitDiagramWidth(svg: string): string {
-  return svg.replace(WIDTH_CAP, (whole, head: string, px: string) => {
-    const natural = Number.parseFloat(px);
-    if (natural <= 0) return whole;
-    return `${head}${natural * MAX_UPSCALE}px; min-width: ${natural}px`;
-  });
-}
+const DIAGRAM_PADDING = 2;
 
 async function getMermaid(dark: boolean): Promise<MermaidModule> {
   mermaidPromise ??= import('mermaid').then((m) => m.default);
   const mermaid = await mermaidPromise;
   const theme = dark ? 'dark' : 'default';
   if (initializedTheme !== theme) {
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme });
+    // `useMaxWidth` is left at its default: mermaid stamps `width="100%"` plus
+    // an inline `max-width:<natural layout width>px`, which is exactly the rule
+    // we want — fill the column, never scale up past natural size. Sizing below
+    // that is CSS's business (see `.diagram-node` / `.mermaid-diagram`).
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme,
+      flowchart: { diagramPadding: DIAGRAM_PADDING },
+    });
     initializedTheme = theme;
   }
   return mermaid;
@@ -74,15 +45,12 @@ export async function renderMermaidToSvg(code: string, dark: boolean): Promise<s
   if (cached) return cached;
   const mermaid = await getMermaid(dark);
   const { svg } = await mermaid.render(`mermaid-${++renderSeq}`, code);
-  // Cache the fitted markup: every consumer (WYSIWYG node view, preview,
-  // export, the editor modal) wants the same sizing, and none can forget it.
-  const fitted = fitDiagramWidth(svg);
-  svgCache.set(key, fitted);
+  svgCache.set(key, svg);
   if (svgCache.size > 100) {
     const first = svgCache.keys().next().value;
     if (first !== undefined) svgCache.delete(first);
   }
-  return fitted;
+  return svg;
 }
 
 /** Replace `pre > code.language-mermaid` blocks inside `root` with rendered SVG. */

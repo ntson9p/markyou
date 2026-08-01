@@ -14,12 +14,7 @@ const PAGE_CSS = `
     .md-doc { margin: 0; max-width: none; padding: 0; }
     /* A scroll container clips on paper instead of scrolling — let a wide
        table print in full (overflowing the page beats losing columns). */
-    .md-table-scroll, .mermaid-diagram { overflow: visible; }
-    /* Paper cannot scroll, so drop the natural-size floor and let an over-wide
-       diagram scale down to the page instead of running off it. Only an
-       important declaration gets past mermaid's inline bounds; the upscale cap
-       stays, so a small diagram is not blown up to the full page width. */
-    .mermaid-diagram svg { min-width: 0 !important; }
+    .md-table-scroll { overflow: visible; }
     pre, table, .md-table-scroll, blockquote, .callout, .mermaid-diagram, figure, img { break-inside: avoid; }
     h1, h2, h3, h4 { break-after: avoid; }
     a { color: inherit; text-decoration: underline; }
