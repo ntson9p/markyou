@@ -104,6 +104,74 @@ test.describe('table width (FR-4.4)', () => {
     expect(geometry.docScrollsHorizontally).toBe(false);
   });
 
+  test('resizing after hovering a table leaves no phantom scrollbar', async ({ page }) => {
+    await open(page, 'wysiwyg', 140);
+    const table = page.locator('.ProseMirror table.children').first();
+    await expect(table).toBeVisible({ timeout: 30000 });
+
+    // Arm both insertion-line handles: they cache absolute geometry measured
+    // against the *current* table width, and only recompute it on a hover.
+    const cell = (await page.locator('.ProseMirror td').first().boundingBox())!;
+    await page.mouse.move(cell.x + cell.width / 2, cell.y + cell.height - 2); // row boundary
+    await page.waitForTimeout(150);
+    await page.mouse.move(cell.x + cell.width - 2, cell.y + cell.height / 2); // column boundary
+    await page.waitForTimeout(150);
+    // Leave the table so the handles hide (but keep their inline geometry).
+    await page.mouse.move(20, 20);
+    await page.waitForTimeout(300);
+
+    // Narrow the page well below the width the handles were measured at.
+    await page.getByTestId('page-measure-right').focus();
+    for (let i = 0; i < 12; i += 1) await page.keyboard.press('ArrowLeft');
+    await page.waitForTimeout(150);
+
+    const overflow = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('.table-wrapper')].map((w) => ({
+        horizontal: w.scrollWidth - w.clientWidth,
+        vertical: w.scrollHeight - w.clientHeight,
+      })),
+    );
+    // Hidden chrome must not make the table scrollable.
+    for (const o of overflow) {
+      expect(o.horizontal).toBe(0);
+      expect(o.vertical).toBe(0);
+    }
+  });
+
+  test('the insertion line still lands on the boundary it marks', async ({ page }) => {
+    await open(page, 'wysiwyg', 100);
+    await expect(page.locator('.ProseMirror table.children').first()).toBeVisible({
+      timeout: 30000,
+    });
+
+    // Guards the fix's shape: hiding the handles with `display: none` would
+    // also stop the overflow, but it detaches offsetParent and floating-ui
+    // then places the affordance hundreds of pixels away.
+    const row = (await page.locator('.ProseMirror tbody tr').nth(1).boundingBox())!;
+    await page.mouse.move(row.x + row.width / 2, row.y + 2);
+    await page.waitForTimeout(250);
+
+    // The hovered row belongs to the first table; scope to its handle (each
+    // table block renders its own).
+    const firstTable = page.locator('.milkdown-table-block').first();
+    const placement = await page.evaluate((rowTop) => {
+      const handle = document
+        .querySelector('.milkdown-table-block')!
+        .querySelector('[data-role="x-line-drag-handle"]') as HTMLElement;
+      return {
+        shown: handle.dataset.show,
+        offBy: Math.round(handle.getBoundingClientRect().top - rowTop),
+      };
+    }, row.y);
+    expect(placement.shown).toBe('true');
+    expect(Math.abs(placement.offBy)).toBeLessThanOrEqual(2);
+
+    // …and the affordance still works.
+    const before = await firstTable.locator('table.children tr').count();
+    await firstTable.locator('[data-role="x-line-drag-handle"] .add-button').click();
+    await expect(firstTable.locator('table.children tr')).toHaveCount(before + 1);
+  });
+
   test('scroll-sync anchors survive the wrapper', async ({ page }) => {
     await open(page, 'raw');
     await expect(page.locator('.md-doc table').first()).toBeVisible({ timeout: 30000 });

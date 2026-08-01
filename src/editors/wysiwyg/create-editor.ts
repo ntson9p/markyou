@@ -51,7 +51,7 @@ import { imagePastePlugin } from './plugins/image-paste';
 import { listA11yPlugin } from './plugins/list-a11y';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
-import { configureTableBlock } from './plugins/table-block';
+import { configureTableBlock, tableHandleResetPlugin } from './plugins/table-block';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
 import { diagramView } from './views/diagram-view';
@@ -242,6 +242,7 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(placeholderPlugin)
       .use(findPlugin)
       .use(listA11yPlugin)
+      .use(tableHandleResetPlugin)
       .use(listener)
       .use(statePlugin)
       .create()

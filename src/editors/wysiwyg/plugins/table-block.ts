@@ -1,5 +1,7 @@
 import { tableBlockConfig, type RenderType } from '@milkdown/kit/component/table-block';
 import type { Ctx } from '@milkdown/kit/ctx';
+import { Plugin } from '@milkdown/kit/prose/state';
+import { $prose } from '@milkdown/kit/utils';
 
 import { icons } from './icons';
 
@@ -38,3 +40,69 @@ export function configureTableBlock(ctx: Ctx) {
     },
   });
 }
+
+/**
+ * Drop stale insertion-line geometry when a table is resized.
+ *
+ * The component positions the row/column insertion lines by writing absolute
+ * geometry into their inline styles on hover (`width` + `top` for the row
+ * line, `left` + `height` for the column line) and only recomputes it on the
+ * next hover. Those handles sit inside `.table-wrapper` — the table's scroll
+ * container — and hiding them uses `visibility`, which keeps them in the box
+ * tree. So after the page is resized (the page measure, the dual splitter, the
+ * window), geometry measured against the old width overflows the new wrapper
+ * and the table sprouts a phantom horizontal scrollbar — which then vanishes
+ * as soon as a hover recomputes the handle.
+ *
+ * Hiding them with `display: none` would also keep them out of the overflow,
+ * but it detaches `offsetParent`: floating-ui then resolves the handle against
+ * the document and the affordance lands hundreds of pixels from its boundary.
+ *
+ * So clear the geometry instead, and only while a handle is hidden — a visible
+ * one is being driven by the component and must not be touched. Nothing is
+ * lost: the next pointer move measures the table afresh.
+ */
+export const tableHandleResetPlugin = $prose(
+  () =>
+    new Plugin({
+      view: (view) => {
+        if (typeof ResizeObserver === 'undefined') return {};
+
+        const observed = new Set<Element>();
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const stale = entry.target.querySelectorAll<HTMLElement>(
+              ':scope > .line-handle, :scope > .drag-preview',
+            );
+            for (const el of stale) {
+              if (el.dataset.show !== 'true') el.removeAttribute('style');
+            }
+          }
+        });
+
+        const sync = () => {
+          for (const wrapper of view.dom.querySelectorAll('.table-wrapper')) {
+            if (!observed.has(wrapper)) {
+              observer.observe(wrapper);
+              observed.add(wrapper);
+            }
+          }
+          for (const wrapper of observed) {
+            if (!wrapper.isConnected) {
+              observer.unobserve(wrapper);
+              observed.delete(wrapper);
+            }
+          }
+        };
+
+        sync();
+        return {
+          update: sync,
+          destroy: () => {
+            observer.disconnect();
+            observed.clear();
+          },
+        };
+      },
+    }),
+);
