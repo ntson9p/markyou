@@ -11,6 +11,43 @@ let initializedTheme: string | null = null;
 const svgCache = new Map<string, string>();
 let renderSeq = 0;
 
+/**
+ * How far past its natural width a diagram may be stretched to fill a column.
+ *
+ * A power of two keeps the doubled value exact in binary, so the rewritten cap
+ * carries no float noise.
+ */
+const MAX_UPSCALE = 2;
+
+/**
+ * Only the cap inside the opening `<svg …>` tag: `[^>]` cannot cross out of
+ * the tag, so the `<style>` block mermaid inlines right after it — which has
+ * `max-width` declarations of its own for HTML labels — is left alone.
+ */
+const WIDTH_CAP = /^([^<]*<svg\b[^>]*?max-width:\s*)(\d+(?:\.\d+)?)px/i;
+
+/**
+ * Widen mermaid's self-imposed width cap.
+ *
+ * Every diagram type ships `width="100%"` plus an inline
+ * `style="max-width:<layout width>px"` (its `useMaxWidth` default): fill the
+ * container, but never grow past whatever width mermaid's own text metrics
+ * produced. That width is unrelated to our column, so a diagram stalls partway
+ * across a wide page — and an inline style outranks every stylesheet rule, so
+ * CSS cannot raise the cap.
+ *
+ * Lifting the cap to a bounded multiple rather than dropping it keeps the
+ * useful half of mermaid's rule: a diagram fills a column up to `MAX_UPSCALE`×
+ * its natural width, while a two-node graph (85 px wide) still can't be
+ * inflated to span a 1200 px page.
+ */
+export function liftWidthCap(svg: string): string {
+  return svg.replace(WIDTH_CAP, (whole, head: string, px: string) => {
+    const natural = Number.parseFloat(px);
+    return natural > 0 ? `${head}${natural * MAX_UPSCALE}px` : whole;
+  });
+}
+
 async function getMermaid(dark: boolean): Promise<MermaidModule> {
   mermaidPromise ??= import('mermaid').then((m) => m.default);
   const mermaid = await mermaidPromise;
@@ -28,12 +65,15 @@ export async function renderMermaidToSvg(code: string, dark: boolean): Promise<s
   if (cached) return cached;
   const mermaid = await getMermaid(dark);
   const { svg } = await mermaid.render(`mermaid-${++renderSeq}`, code);
-  svgCache.set(key, svg);
+  // Cache the fitted markup: every consumer (WYSIWYG node view, preview,
+  // export, the editor modal) wants the same sizing, and none can forget it.
+  const fitted = liftWidthCap(svg);
+  svgCache.set(key, fitted);
   if (svgCache.size > 100) {
     const first = svgCache.keys().next().value;
     if (first !== undefined) svgCache.delete(first);
   }
-  return svg;
+  return fitted;
 }
 
 /** Replace `pre > code.language-mermaid` blocks inside `root` with rendered SVG. */

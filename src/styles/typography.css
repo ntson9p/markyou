@@ -319,8 +319,9 @@
   justify-content: center;
   margin: 1em 0;
 }
+/* Width is capped inline by mermaid and rewritten by `liftWidthCap`
+   (editors/preview/mermaid.ts); a rule here would never win the cascade. */
 .md-doc .mermaid-diagram svg {
-  max-width: 100%;
   height: auto;
 }
 .md-doc .mermaid-error {

@@ -145,7 +145,8 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           data-testid="diagram-preview"
           aria-label="Diagram preview"
           aria-live="polite"
-          className="flex min-h-full items-center justify-center p-4 [&_svg]:h-auto [&_svg]:max-w-full"
+          // No `max-w-full`: mermaid's inline cap outranks it. See liftWidthCap.
+          className="flex min-h-full items-center justify-center p-4 [&_svg]:h-auto"
         />
       </div>
       {error && (

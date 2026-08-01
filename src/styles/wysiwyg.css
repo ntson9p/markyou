@@ -87,9 +87,10 @@
   border-color: var(--border);
 }
 
+/* No `max-width` here: mermaid stamps its own cap inline, which outranks any
+   rule we could write. `liftWidthCap` (editors/preview/mermaid.ts) owns it. */
 .diagram-node svg {
   margin: 0 auto;
-  max-width: 100%;
 }
 
 /* ---------- raw HTML chips (FR-5.11) ---------- */
