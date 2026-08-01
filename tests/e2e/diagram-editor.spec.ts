@@ -84,6 +84,29 @@ test.describe('mermaid editor modal (FR-5.9)', () => {
     expect(saved).toContain('```mermaid');
   });
 
+  test('the source keeps focus through the first keystroke', async ({ page }) => {
+    const diagram = await openDoc(page);
+    await diagram.click();
+    await source(page).click();
+    await expect(source(page)).toBeFocused();
+
+    // The first edit flips the modal from clean to dirty; nothing about that
+    // may move focus out of the field being typed into.
+    await page.keyboard.type('A');
+    await expect(source(page)).toBeFocused();
+
+    // …and every following keystroke still lands in the source.
+    await page.keyboard.type('BC');
+    await expect(source(page)).toHaveValue(/ABC/);
+    await expect(source(page)).toBeFocused();
+  });
+
+  test('opening focuses the source, ready to type', async ({ page }) => {
+    const diagram = await openDoc(page);
+    await diagram.click();
+    await expect(source(page)).toBeFocused();
+  });
+
   test('closing without edits needs no confirmation', async ({ page }) => {
     const diagram = await openDoc(page);
     await diagram.click();

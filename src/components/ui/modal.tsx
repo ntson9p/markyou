@@ -41,6 +41,25 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Initial focus — on open only, and never over content that already claimed
+   * it (a child's `autoFocus`).
+   *
+   * This deliberately does NOT share an effect with the key handler below: any
+   * change in the caller's `onClose` identity re-runs the effect, and a
+   * caller whose handler closes over state — a dirty flag flipping on the
+   * first keystroke, say — would have focus yanked out of the field it was
+   * typing into.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const t = window.setTimeout(() => {
+      const panel = panelRef.current;
+      if (panel && !panel.contains(document.activeElement)) panel.focus();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -66,11 +85,7 @@ export function Modal({
       }
     };
     document.addEventListener('keydown', onKeyDown, true);
-    const t = window.setTimeout(() => panelRef.current?.focus(), 0);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      window.clearTimeout(t);
-    };
+    return () => document.removeEventListener('keydown', onKeyDown, true);
   }, [open, onClose]);
 
   if (!open) return null;

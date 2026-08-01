@@ -124,6 +124,8 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           }
         }}
         spellCheck={false}
+        // The user clicked the diagram to edit it — start in the source.
+        autoFocus
         aria-label="Mermaid source"
         data-testid="diagram-source"
         placeholder={'graph TD\n  A --> B'}
