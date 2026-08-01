@@ -133,16 +133,20 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     expect(narrowed.width).toBeCloseTo(narrowed.available, -1);
   });
 
-  test('a very tall diagram is scaled down by the height cap, not scrolled', async ({ page }) => {
+  test('a tall diagram keeps its proportions rather than being letterboxed', async ({ page }) => {
     await open(page, 'wysiwyg', 72, TALL);
     await expect(page.locator('.diagram-node svg')).toBeVisible({ timeout: 30000 });
 
     const [tall] = await scan(page, '.diagram-node');
-    const capPx = await page.evaluate(() => window.innerHeight * 0.7);
-    expect(tall.naturalH).toBeGreaterThan(capPx); // genuinely taller than the cap
-    expect(tall.height).toBeLessThanOrEqual(Math.ceil(capPx) + 1);
-    // Scaled uniformly — width came down with it, and nothing scrolls.
-    expect(tall.width).toBeLessThan(tall.natural);
+    expect(tall.naturalH).toBeGreaterThan(1000); // genuinely tall
+
+    // A `max-height` cap looks like the right guard but cannot scale an SVG
+    // whose width is already definite: it clips the box, and
+    // `preserveAspectRatio` then shrinks the drawing inside it and pads the
+    // sides — a tall diagram came out small and ringed with blank. The box
+    // must keep the diagram's own aspect ratio.
+    expect(tall.width / tall.height).toBeCloseTo(tall.natural / tall.naturalH, 2);
+    expect(tall.height).toBe(Math.round(tall.naturalH));
     expect(tall.scrollY).toBe(0);
     expect(tall.scrollX).toBe(0);
   });

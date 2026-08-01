@@ -88,13 +88,15 @@
 }
 
 /* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
-   the column, never scales up past natural size. `max-height` is the matching
-   guard on the other axis — an SVG carries an intrinsic ratio, so capping the
-   height *scales* a very tall diagram down rather than clipping it or nesting
-   a scrollbar inside a page that already scrolls. */
+   the column, never scales up past natural size.
+
+   Deliberately no `max-height`. Because that width is definite, a height cap
+   does not scale the diagram down — it clips the box and lets
+   `preserveAspectRatio` shrink the drawing inside it, so a tall diagram ends
+   up small and ringed with blank. A tall diagram is simply tall; the page
+   already scrolls. */
 .diagram-node svg {
   margin: 0 auto;
-  max-height: 70vh;
 }
 
 /* ---------- raw HTML chips (FR-5.11) ---------- */

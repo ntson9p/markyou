@@ -318,16 +318,15 @@
   margin: 1em 0;
 }
 /* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
-   the column, never scales up past natural size. `max-height` caps the other
-   axis by *scaling* — an SVG has an intrinsic ratio — so a very tall diagram
-   shrinks to fit instead of clipping. `display: block` is explicit because the
-   standalone export ships this file without a CSS reset, where an `svg` would
-   otherwise stay inline and `margin: 0 auto` would not centre it. */
+   the column, never scales up past natural size. No `max-height` — against a
+   definite width it clips the box rather than scaling, leaving the drawing
+   small inside blank bars. `display: block` is explicit because the standalone
+   export ships this file without a CSS reset, where an `svg` would otherwise
+   stay inline and `margin: 0 auto` would not centre it. */
 .md-doc .mermaid-diagram svg {
   display: block;
   height: auto;
   margin: 0 auto;
-  max-height: 70vh;
 }
 .md-doc .mermaid-error {
   color: var(--doc-mark-caution);
