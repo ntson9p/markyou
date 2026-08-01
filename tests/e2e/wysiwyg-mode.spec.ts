@@ -43,6 +43,18 @@ const README = [
   'The end.',
 ].join('\n');
 
+/** A table with distinguishable cells for the FR-5.7 handle tests. */
+const TABLE_DOC = [
+  '## Glossary',
+  '',
+  '| Term | Meaning |',
+  '| --- | --- |',
+  '| slot | One bookable time cell |',
+  '| frame | A settings document |',
+  '| parent | Base reservation |',
+  '',
+].join('\n');
+
 async function newWysiwygDoc(page: Page) {
   await page.goto('/');
   await page.getByTestId('welcome-new').click();
@@ -109,6 +121,77 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     // The table-block component renders the content into `table.children`.
     await expect(editor(page).locator('table.children')).toBeVisible();
     expect(await editor(page).locator('table.children tr').count()).toBe(3);
+  });
+
+  test('table handles stay out of the document until hovered (FR-5.7)', async ({ page }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'table.md', TABLE_DOC);
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page).locator('table.children')).toBeVisible({ timeout: 15000 });
+
+    // The drag handles are siblings of the table wrapper: unpositioned, they
+    // land in the text flow above the table and render their icons as loose
+    // characters ("=", "left", "center", "right", "-").
+    const offset = await page.evaluate(() => {
+      const block = document.querySelector('.milkdown-table-block') as HTMLElement;
+      const wrapper = block.querySelector('.table-wrapper') as HTMLElement;
+      return wrapper.getBoundingClientRect().top - block.getBoundingClientRect().top;
+    });
+    expect(offset).toBeLessThan(4);
+
+    for (const role of ['col-drag-handle', 'row-drag-handle', 'x-line-drag-handle']) {
+      await expect(page.locator(`[data-role="${role}"]`)).toBeHidden();
+    }
+
+    // Hovering a cell reveals the column/row grips.
+    await editor(page).locator('td').first().hover();
+    await expect(page.locator('[data-role="col-drag-handle"]')).toBeVisible();
+    await expect(page.locator('[data-role="row-drag-handle"]')).toBeVisible();
+  });
+
+  test('table column alignment via the handle group (FR-5.7)', async ({ page }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'table.md', TABLE_DOC);
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page).locator('table.children')).toBeVisible({ timeout: 15000 });
+
+    // Column grip → button group → centre alignment.
+    await editor(page).locator('td').first().hover();
+    const colHandle = page.locator('[data-role="col-drag-handle"]');
+    await colHandle.click();
+    const align = colHandle.getByRole('button', { name: 'Align column center' });
+    await expect(align).toBeVisible();
+    await align.click();
+    await expect(editor(page).locator('th').first()).toHaveAttribute('style', /center/);
+
+    await page.waitForTimeout(600); // push debounce
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(page.getByTestId('status-save')).toContainText('Saved');
+    // Centre alignment survives serialization: `| :----: |`.
+    expect((await getFakeDisk(page))['table.md']).toMatch(/\|\s*:-+:\s*\|/);
+  });
+
+  test('table row deletion via the handle group (FR-5.7)', async ({ page }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'table.md', TABLE_DOC);
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page).locator('table.children')).toBeVisible({ timeout: 15000 });
+
+    await editor(page).locator('td', { hasText: 'frame' }).hover();
+    const rowHandle = page.locator('[data-role="row-drag-handle"]');
+    await rowHandle.click();
+    const remove = rowHandle.getByRole('button', { name: 'Delete row' });
+    await expect(remove).toBeVisible();
+    await remove.click();
+    await expect(editor(page).locator('table.children')).not.toContainText('frame');
+
+    await page.waitForTimeout(600); // push debounce
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(page.getByTestId('status-save')).toContainText('Saved');
+    expect((await getFakeDisk(page))['table.md']).not.toContain('frame');
   });
 
   test('math input rule renders KaTeX; click opens the source editor (FR-5.8)', async ({

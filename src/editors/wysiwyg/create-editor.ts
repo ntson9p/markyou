@@ -51,6 +51,7 @@ import { imagePastePlugin } from './plugins/image-paste';
 import { listA11yPlugin } from './plugins/list-a11y';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
+import { configureTableBlock } from './plugins/table-block';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
 import { diagramView } from './views/diagram-view';
@@ -195,6 +196,9 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
           ],
         }));
         configureLinkTooltip(ctx);
+        // Table handles/alignment controls (FR-5.7) — icons instead of the
+        // component's text placeholders.
+        configureTableBlock(ctx);
         // WYSIWYG UX polish (M4): bubble menu, slash commands, block handles.
         configureBubbleMenu(ctx);
         configureSlashMenu(ctx);
