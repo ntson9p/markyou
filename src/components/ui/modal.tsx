@@ -11,11 +11,18 @@ interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  /** Wider dialog for diff/history views. */
-  size?: 'md' | 'lg' | 'xl';
+  /** Wider dialog for diff/history views; 'full' is a fixed-height workspace. */
+  size?: 'md' | 'lg' | 'xl' | 'full';
+  /** Overrides the body padding/scrolling (e.g. a split pane owns its own). */
+  bodyClassName?: string;
 }
 
-const SIZES = { md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' } as const;
+const SIZES = {
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
+  full: 'max-w-[min(1400px,95vw)] h-[85vh]',
+} as const;
 
 /**
  * Owned modal primitive (D12): portal, backdrop, Esc-to-close,
@@ -30,6 +37,7 @@ export function Modal({
   children,
   footer,
   size = 'md',
+  bodyClassName,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +107,7 @@ export function Modal({
             <X className="size-4" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <div className={cn('min-h-0 flex-1 overflow-y-auto p-4', bodyClassName)}>{children}</div>
         {footer && (
           <div className="flex justify-end gap-2 border-t border-border px-4 py-3">{footer}</div>
         )}

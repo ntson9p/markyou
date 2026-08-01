@@ -11,6 +11,7 @@ import { newDocument, openDocument, saveDocument, saveDocumentAs } from '@/featu
 import { startDraftGuard } from '@/features/files/drafts';
 import { useFileDrop } from '@/features/files/useFileDrop';
 import { WelcomeScreen } from '@/features/files/WelcomeScreen';
+import { DiagramEditorModal } from '@/features/diagram/DiagramEditorModal';
 import { ExportPanel } from '@/features/export/ExportPanel';
 import { ShortcutsPanel } from '@/features/help/ShortcutsPanel';
 import { MetadataPanel } from '@/features/metadata/MetadataPanel';
@@ -147,6 +148,7 @@ export function AppShell() {
       <ExportPanel />
       <HistoryPanel />
       <ShortcutsPanel />
+      <DiagramEditorModal />
     </div>
   );
 }

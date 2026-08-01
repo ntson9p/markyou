@@ -6,6 +6,7 @@ import { TextSelection } from '@milkdown/kit/prose/state';
 import type { EditorState } from '@milkdown/kit/prose/state';
 
 import { useDocStore } from '@/core/document/store';
+import { isDiagramEditorOpen, useDiagramEditorStore } from '@/features/diagram/store';
 import { useSettingsStore } from '@/features/settings/store';
 
 import { createWysiwygEditor } from './create-editor';
@@ -96,7 +97,10 @@ export function WysiwygEditor({ onEditorReady, onStateChange, onParseError }: Wy
       editor.action((ctx) => {
         const view = ctx.get(editorViewCtx);
         // Defer while the user is actively editing this pane; apply on blur.
-        if (view.hasFocus()) {
+        // A node editor (the mermaid modal, FR-5.9) counts as editing even
+        // though it blurs the surface: replacing the document would destroy
+        // the NodeView its pending edit targets, dropping the edit silently.
+        if (view.hasFocus() || isDiagramEditorOpen()) {
           deferred = true;
           return;
         }
@@ -164,6 +168,11 @@ export function WysiwygEditor({ onEditorReady, onStateChange, onParseError }: Wy
         );
       });
 
+    // Closing the node editor releases the deferral above.
+    const unsubscribeDiagram = useDiagramEditorStore.subscribe((state, prev) => {
+      if (prev.session && !state.session && deferred) scheduleReplace();
+    });
+
     // Store → editor: guarded schedule on any external version (plan §2.2).
     const unsubscribe = useDocStore.subscribe((state, prev) => {
       if (!editor) return;
@@ -177,6 +186,7 @@ export function WysiwygEditor({ onEditorReady, onStateChange, onParseError }: Wy
     return () => {
       disposed = true;
       unsubscribe();
+      unsubscribeDiagram();
       if (replaceTimer !== null) window.clearTimeout(replaceTimer);
       detachBlur?.();
       flushPush();

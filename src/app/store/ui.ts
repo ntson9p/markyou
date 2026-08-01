@@ -40,6 +40,10 @@ interface UiState {
   setWysiwygMeasure: (ch: number) => void;
   resetWysiwygMeasure: () => void;
 
+  /** Source/preview split of the mermaid editor (FR-5.9); persisted like the others. */
+  diagramSplit: number;
+  setDiagramSplit: (ratio: number) => void;
+
   /** Cursor position for the status bar (FR-10.3); not persisted. */
   cursor: { line: number; col: number } | null;
   setCursor: (cursor: { line: number; col: number } | null) => void;
@@ -70,6 +74,9 @@ export const useUiStore = create<UiState>()(
       setWysiwygMeasure: (ch) => set({ wysiwygMeasure: clampMeasure(ch) }),
       resetWysiwygMeasure: () => set({ wysiwygMeasure: DEFAULT_MEASURE_CH }),
 
+      diagramSplit: 1 / 3,
+      setDiagramSplit: (diagramSplit) => set({ diagramSplit }),
+
       cursor: null,
       setCursor: (cursor) => set({ cursor }),
 
@@ -85,6 +92,7 @@ export const useUiStore = create<UiState>()(
         rawSplit: state.rawSplit,
         dualSplit: state.dualSplit,
         wysiwygMeasure: state.wysiwygMeasure,
+        diagramSplit: state.diagramSplit,
       }),
     },
   ),

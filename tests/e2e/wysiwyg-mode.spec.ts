@@ -348,11 +348,14 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     // Mermaid is a lazy chunk; the SVG appears once it loads.
     await expect(diagram.locator('svg')).toBeVisible({ timeout: 20000 });
 
+    // Click opens the full-screen source editor (covered in depth by
+    // diagram-editor.spec.ts); here it is a smoke check either side of D13.
     await diagram.click();
-    const popover = page.getByRole('dialog', { name: 'Edit Mermaid diagram' });
-    await expect(popover).toBeVisible();
-    await expect(popover.locator('textarea')).toHaveValue(/graph TD/);
-    await popover.getByRole('button', { name: 'Cancel' }).click();
+    const sourceEditor = page.getByRole('dialog', { name: 'Edit Mermaid diagram' });
+    await expect(sourceEditor).toBeVisible();
+    await expect(sourceEditor.getByTestId('diagram-source')).toHaveValue(/graph TD/);
+    await sourceEditor.getByRole('button', { name: 'Cancel' }).click();
+    await expect(sourceEditor).toBeHidden();
 
     // The fence stays byte-identical through a WYSIWYG session (D13).
     await page.keyboard.press('ControlOrMeta+Shift+Digit1');

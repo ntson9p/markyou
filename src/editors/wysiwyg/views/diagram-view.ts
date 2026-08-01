@@ -2,13 +2,13 @@ import { $view } from '@milkdown/kit/utils';
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view';
 
 import { renderMermaidToSvg } from '@/editors/preview/mermaid';
+import { openDiagramEditor } from '@/features/diagram/store';
 
 import { diagramSchema } from '../nodes/diagram';
-import { openSourcePopover } from './source-popover';
 
 /**
  * Mermaid diagram NodeView (FR-5.9): rendered read-only in place; click opens
- * the source popover; the diagram re-renders on Apply.
+ * the full-screen source/preview editor; the diagram re-renders on Apply.
  */
 
 function isDark(): boolean {
@@ -53,21 +53,20 @@ export const diagramView = $view(diagramSchema.node, (): NodeViewConstructor => 
       if (pos === undefined) return;
       const current = view.state.doc.nodeAt(pos);
       if (!current) return;
-      openSourcePopover({
-        anchor: dom,
+      openDiagramEditor({
         value: current.attrs.value as string,
-        label: 'Edit Mermaid diagram',
-        placeholder: 'graph TD\n  A --> B',
         onApply: (next) => {
+          // Re-resolve at apply time: the modal outlives any number of
+          // document changes, so a position captured on open can be stale.
           const at = getPos();
           if (at === undefined) return;
           const target = view.state.doc.nodeAt(at);
-          if (!target) return;
+          if (!target || target.type !== node.type) return;
           view.dispatch(
             view.state.tr.setNodeMarkup(at, undefined, { ...target.attrs, value: next }),
           );
-          view.focus();
         },
+        onClose: () => view.focus(),
       });
     };
     dom.addEventListener('click', open);
