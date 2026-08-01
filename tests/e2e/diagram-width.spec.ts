@@ -44,7 +44,21 @@ const DOC = [
   '',
 ].join('\n');
 
-async function open(page: Page, mode: 'wysiwyg' | 'raw', measure?: number) {
+/** A flowchart wider than any window we test at. */
+const OVER_WIDE = [
+  '## Head',
+  '',
+  '```mermaid',
+  'flowchart LR',
+  ...Array.from(
+    { length: 9 },
+    (_, i) => `  S${i}["Step ${i}: a reasonably long label here"] --> S${i + 1}`,
+  ),
+  '```',
+  '',
+].join('\n');
+
+async function open(page: Page, mode: 'wysiwyg' | 'raw', measure?: number, body = DOC) {
   await pinMode(page, mode);
   if (measure !== undefined) {
     await page.addInitScript((ch) => {
@@ -55,7 +69,7 @@ async function open(page: Page, mode: 'wysiwyg' | 'raw', measure?: number) {
     }, measure);
   }
   await stubFsa(page);
-  await seedFakeFile(page, 'diagrams.md', DOC);
+  await seedFakeFile(page, 'diagrams.md', body);
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('/');
   await page.getByTestId('welcome-open').click();
@@ -152,6 +166,47 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
       expect(d.floor).toBeCloseTo(d.natural, 3);
       expect(d.ceiling).toBeCloseTo(d.natural * 2, 3);
     }
+  });
+
+  test('a diagram wider than the window never pushes the page off-screen', async ({ page }) => {
+    await open(page, 'wysiwyg', 72, OVER_WIDE);
+    await expect(page.locator('.diagram-node svg')).toBeVisible({ timeout: 30000 });
+
+    const layout = await page.evaluate(() => {
+      const card = document.querySelector('[data-testid="wysiwyg-page"]') as HTMLElement;
+      const node = document.querySelector('.diagram-node') as HTMLElement;
+      const box = card.getBoundingClientRect();
+      return {
+        blownOutBy: document.documentElement.scrollWidth - window.innerWidth,
+        cardLeft: Math.round(box.left),
+        cardRight: Math.round(box.right),
+        winW: window.innerWidth,
+        nodeScrollX: node.scrollWidth - node.clientWidth,
+      };
+    });
+
+    // The editor pane is a row flex item: without `min-w-0` its automatic
+    // minimum is the diagram's min-content width, which stretches the pane
+    // past the window and slides the page out of view, leaving the reader
+    // looking at nothing but the backdrop.
+    expect(layout.blownOutBy).toBe(0);
+    expect(layout.cardLeft).toBeGreaterThanOrEqual(0);
+    expect(layout.cardRight).toBeLessThanOrEqual(layout.winW);
+    // …while the diagram itself still scrolls inside its own box.
+    expect(layout.nodeScrollX).toBeGreaterThan(0);
+  });
+
+  test('a long code line does not push the page off-screen either', async ({ page }) => {
+    // Same root cause, reachable before diagrams ever were: any block with a
+    // wide min-content and its own scroller.
+    const long = ['## Head', '', '```js', `const x = "${'y'.repeat(600)}";`, '```', ''].join('\n');
+    await open(page, 'wysiwyg', 72, long);
+    await expect(page.locator('.milkdown-code-block')).toBeVisible({ timeout: 30000 });
+
+    const blownOutBy = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(blownOutBy).toBe(0);
   });
 
   test('the preview shares the same sizing', async ({ page }) => {

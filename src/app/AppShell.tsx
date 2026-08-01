@@ -134,7 +134,12 @@ export function AppShell() {
         {status === 'open' ? (
           <>
             {outlineVisible && <Outline drawer={isSmall} />}
-            <div className="min-h-0 flex-1">
+            {/* `min-w-0` guards the main axis: `main` is a row, so a flex
+                item's automatic minimum is its *min-content width*. Without
+                it, one block that is intrinsically wide — a long code line, a
+                large diagram — stretches this pane past the window and pushes
+                the page off-screen, leaving only the backdrop in view. */}
+            <div className="min-h-0 min-w-0 flex-1">
               <EditorArea />
             </div>
           </>
