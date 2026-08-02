@@ -16,13 +16,20 @@ function isDark(): boolean {
 }
 
 /**
- * TEMPORARY diagnostic — REMOVE once the diagram-sizing report is closed.
+ * Off. Flip to `true` to print, under every diagram whose geometry looks
+ * wrong, the numbers that separate "mermaid produced a bad drawing" from "our
+ * layout shrank a good one" — readable from a screenshot, so a report can be
+ * diagnosed without a console session on the reporter's machine.
  *
- * Prints the numbers that separate "mermaid produced a tiny drawing" from
- * "our layout shrank a correctly-sized one", so the answer can be read off a
- * screenshot instead of a console session.
+ * Kept rather than deleted because it earned it: three distinct mermaid canvas
+ * failures were found with it (canvas far too large, misplaced, far too
+ * small), each invisible to the others and none reproducible here.
+ *
+ * A caveat if you switch it on: it also fires below 0.25 scale, which is no
+ * longer necessarily a fault — with `diagramScroll` off, a very wide diagram
+ * is *meant* to shrink that far.
  */
-const DEBUG_DIAGRAM_SIZE = true;
+const DEBUG_DIAGRAM_SIZE = false;
 
 function boxOf(node: Element): DOMRect | null {
   try {

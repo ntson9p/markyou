@@ -134,7 +134,8 @@
   min-width: calc(var(--diagram-natural, 0px) * var(--diagram-min-scale));
 }
 
-/* TEMPORARY diagnostic badge — REMOVE with `DEBUG_DIAGRAM_SIZE`. */
+/* Styles the diagnostic badge behind `DEBUG_DIAGRAM_SIZE` (diagram-view.ts),
+   which is off — kept so switching that flag on needs no second edit. */
 .diagram-debug-badge {
   margin-top: 0.4rem;
   padding: 0.25rem 0.4rem;

@@ -161,6 +161,11 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     expect(d.available / d.natural).toBeLessThan(0.6);
     expect(d.width).toBeCloseTo(d.available, -1);
     expect(d.scrollX).toBe(0);
+
+    // `DEBUG_DIAGRAM_SIZE` must stay off in shipped code. This diagram is
+    // exactly the shape that used to trip the badge, so it is the one that
+    // would catch the flag being left on.
+    await expect(page.locator('.diagram-debug-badge')).toHaveCount(0);
   });
 
   test('a diagram too wide to stay readable scrolls instead, once enabled', async ({ page }) => {
