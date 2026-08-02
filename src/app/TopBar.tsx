@@ -1,4 +1,4 @@
-import { Columns2, PanelLeft } from 'lucide-react';
+import { Columns2, PanelLeft, Settings } from 'lucide-react';
 
 import { MainMenu } from '@/app/MainMenu';
 import { ModeSwitcher } from '@/app/ModeSwitcher';
@@ -16,6 +16,7 @@ export function TopBar() {
   const togglePreview = useUiStore((s) => s.toggleRawPreview);
   const outlineVisible = useUiStore((s) => s.outlineVisible);
   const toggleOutline = useUiStore((s) => s.toggleOutline);
+  const setActivePanel = useUiStore((s) => s.setActivePanel);
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2">
@@ -60,6 +61,18 @@ export function TopBar() {
           <Columns2 className={previewVisible ? 'size-4' : 'size-4 opacity-50'} />
         </Button>
       )}
+      {/* Next to the theme toggle, the other app-level preference: both are
+          "how MarkYou behaves", not "what this document is". */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Settings"
+        title="Settings (Ctrl+,)"
+        onClick={() => setActivePanel('settings')}
+        data-testid="settings-open"
+      >
+        <Settings className="size-4" />
+      </Button>
       <ThemeToggle />
     </header>
   );

@@ -148,11 +148,12 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           data-testid="diagram-preview"
           aria-label="Diagram preview"
           aria-live="polite"
-          // No width bounds here — mermaid's inline ones outrank any rule we
-          // could write. Centring is `mx-auto` on the diagram rather than
+          // `diagram-preview` carries the readability floor (wysiwyg.css);
+          // width is otherwise mermaid's own inline rules, which outrank any
+          // we could write. Centring is `mx-auto` on the diagram rather than
           // `justify-center`, which would put the left edge of an over-wide
           // one outside the scroll range.
-          className="flex min-h-full items-center p-4 [&_svg]:mx-auto [&_svg]:h-auto"
+          className="diagram-preview flex min-h-full items-center p-4 [&_svg]:mx-auto [&_svg]:h-auto"
         />
       </div>
       {error && (

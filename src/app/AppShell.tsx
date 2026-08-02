@@ -16,6 +16,8 @@ import { ExportPanel } from '@/features/export/ExportPanel';
 import { ShortcutsPanel } from '@/features/help/ShortcutsPanel';
 import { MetadataPanel } from '@/features/metadata/MetadataPanel';
 import { Outline } from '@/features/outline/Outline';
+import { SettingsPanel } from '@/features/settings/SettingsPanel';
+import { useSettingsStore } from '@/features/settings/store';
 import { HistoryPanel } from '@/features/snapshots/HistoryPanel';
 import { startSnapshotScheduler } from '@/features/snapshots/snapshots';
 
@@ -55,6 +57,13 @@ function useGlobalShortcuts() {
         e.preventDefault();
         const cur = useUiStore.getState().activePanel;
         useUiStore.getState().setActivePanel(cur === 'shortcuts' ? null : 'shortcuts');
+        return;
+      }
+      // Settings (FR-13): Ctrl+, the near-universal convention.
+      if (e.code === 'Comma' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        const cur = useUiStore.getState().activePanel;
+        useUiStore.getState().setActivePanel(cur === 'settings' ? null : 'settings');
         return;
       }
       // File lifecycle (§8.3)
@@ -101,6 +110,19 @@ function useVisualViewportHeight() {
   }, []);
 }
 
+/**
+ * Publish the diagram-scroll preference to the document root, where the
+ * stylesheets read it (FR-5.9). Held in CSS rather than applied per diagram so
+ * toggling it takes effect on every diagram at once, with nothing to re-render
+ * and no already-rendered SVG left carrying a stale inline width.
+ */
+function useDiagramScrollPref() {
+  const on = useSettingsStore((s) => s.diagramScroll);
+  useEffect(() => {
+    document.documentElement.dataset.diagramScroll = on ? 'on' : 'off';
+  }, [on]);
+}
+
 /** FR-1.6: closing the tab with unsaved changes triggers the leave-warning. */
 function useLeaveWarning() {
   useEffect(() => {
@@ -123,6 +145,7 @@ export function AppShell() {
   useGlobalShortcuts();
   useLeaveWarning();
   useVisualViewportHeight();
+  useDiagramScrollPref();
   useFileDrop();
   useEffect(() => startDraftGuard(), []);
   useEffect(() => startSnapshotScheduler(), []);
@@ -153,6 +176,7 @@ export function AppShell() {
       <ExportPanel />
       <HistoryPanel />
       <ShortcutsPanel />
+      <SettingsPanel />
       <DiagramEditorModal />
     </div>
   );

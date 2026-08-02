@@ -87,28 +87,51 @@
   border-color: var(--border);
 }
 
-/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`, floored
-   by the inline `min-width` that `applyReadabilityFloor` adds: fills the
-   column, never scales up past natural size, never shrinks below 60% of it.
-   That floor is why this scrolls — past it the diagram stops shrinking and the
-   overflow has to go somewhere other than the page.
+/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
+   the column, never scales up past natural size.
 
    Deliberately no `max-height`. Because the width is definite, a height cap
    does not scale the diagram down — it clips the box and lets
    `preserveAspectRatio` shrink the drawing inside it, so a tall diagram ends
    up small and ringed with blank. A tall diagram is simply tall; the page
-   already scrolls. */
-.diagram-node {
-  overflow-x: auto;
-}
+   already scrolls.
 
-/* `display: block` so the auto margins centre it, and so they collapse to zero
+   `display: block` so the auto margins centre it, and so they collapse to zero
    when it overflows — `text-align: center` on the parent would instead centre
    the overflow and put the left edge out of scroll range. */
 .diagram-node svg {
   display: block;
   height: auto;
   margin: 0 auto;
+}
+
+/* How small a diagram may be drawn before legibility beats fitting. Mermaid's
+   `max-width` is the ceiling; this is the floor. `--diagram-natural` is
+   published per diagram by `fitDiagram` — CSS cannot read `max-width` to
+   compute `min-width`. */
+:root {
+  --diagram-min-scale: 0.6;
+}
+
+/* Opt-in (FR-13, default off): past the floor a diagram stops shrinking and
+   scrolls sideways, the trade `.md-table-scroll` already makes for a wide
+   table. Off, `min-width` never binds, nothing overflows, and `overflow-x`
+   would have nothing to do — so the rules simply do not apply and the node is
+   the plain block it always was.
+
+   Scoped to the editor: the preview column beside the source always scales to
+   fit, and so do HTML export and print. */
+[data-diagram-scroll='on'] .diagram-node {
+  overflow-x: auto;
+}
+[data-diagram-scroll='on'] .diagram-node svg {
+  min-width: calc(var(--diagram-natural, 0px) * var(--diagram-min-scale));
+}
+
+/* The diagram editor is an inspector — you opened it to look closely — so it
+   honours the floor whatever the document does, and it already scrolls. */
+.diagram-preview svg {
+  min-width: calc(var(--diagram-natural, 0px) * var(--diagram-min-scale));
 }
 
 /* TEMPORARY diagnostic badge — REMOVE with `DEBUG_DIAGRAM_SIZE`. */

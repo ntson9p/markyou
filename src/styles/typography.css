@@ -314,21 +314,20 @@
 }
 
 /* Mermaid diagrams */
-/* Scrolls for the same reason `.md-table-scroll` does: past the readability
-   floor a diagram stops shrinking, and the overflow belongs here rather than
-   across the whole document. */
 .md-doc .mermaid-diagram {
   margin: 1em 0;
-  overflow-x: auto;
 }
-/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`, floored
-   by the inline `min-width` from `applyReadabilityFloor`: fills the column,
-   never scales up past natural size, never shrinks below 60% of it. No
-   `max-height` — against a definite width it clips the box rather than
-   scaling, leaving the drawing small inside blank bars. `display: block` is
-   explicit because the standalone export ships this file without a CSS reset,
-   where an `svg` would otherwise stay inline and `margin: 0 auto` would not
-   centre it (and, overflowing, would put its left edge out of scroll range). */
+/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
+   the column, never scales up past natural size. No `max-height` — against a
+   definite width it clips the box rather than scaling, leaving the drawing
+   small inside blank bars. `display: block` is explicit because the standalone
+   export ships this file without a CSS reset, where an `svg` would otherwise
+   stay inline and `margin: 0 auto` would not centre it.
+
+   No readability floor and so no scrollbar, deliberately and regardless of the
+   setting: this is the preview column beside the source editor, and the same
+   markup is what HTML export and print ship. A diagram here always scales to
+   fit — paper cannot scroll, and a narrow split pane is a poor place to. */
 .md-doc .mermaid-diagram svg {
   display: block;
   height: auto;

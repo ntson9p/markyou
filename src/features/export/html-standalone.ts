@@ -15,11 +15,6 @@ const PAGE_CSS = `
     /* A scroll container clips on paper instead of scrolling — let a wide
        table print in full (overflowing the page beats losing columns). */
     .md-table-scroll { overflow: visible; }
-    /* A diagram can scale, so paper gets the whole thing at whatever size it
-       fits: drop the on-screen readability floor rather than overflow. The
-       floor is an inline style, hence \`!important\`. */
-    .mermaid-diagram { overflow: visible; }
-    .mermaid-diagram svg { min-width: 0 !important; }
     pre, table, .md-table-scroll, blockquote, .callout, .mermaid-diagram, figure, img { break-inside: avoid; }
     h1, h2, h3, h4 { break-after: avoid; }
     a { color: inherit; text-decoration: underline; }

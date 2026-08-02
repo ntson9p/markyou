@@ -99,8 +99,8 @@ export function MainMenu() {
         <DropdownMenuItem onSelect={() => setActivePanel('shortcuts')}>
           Keyboard shortcuts <DropdownMenuShortcut>Ctrl+/</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem disabled onSelect={() => setActivePanel('settings')}>
-          Settings…
+        <DropdownMenuItem onSelect={() => setActivePanel('settings')}>
+          Settings… <DropdownMenuShortcut>Ctrl+,</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

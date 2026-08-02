@@ -45,19 +45,6 @@ const OVERSIZED_CANVAS_FACTOR = 4;
  */
 const OVERDRAWING_TYPES = new Set(['gantt']);
 
-/**
- * How far a diagram may be scaled down to fit its column before legibility
- * matters more than fitting.
- *
- * Mermaid's own `max-width` scales a diagram to whatever column it lands in,
- * which is right until the column is much narrower than the drawing. Three
- * disconnected subgraphs in a `flowchart TB` are laid out side by side into a
- * ~7.5:1 drawing; at prose width that is 0.31 and the labels are unreadable.
- * Past this floor the diagram keeps its size and its container scrolls
- * instead — the same trade `.md-table-scroll` makes for a wide table.
- */
-const MIN_DIAGRAM_SCALE = 0.6;
-
 export interface CanvasRefit {
   from: [number, number];
   to: [number, number];
@@ -138,26 +125,27 @@ export function refitDiagramCanvas(host: HTMLElement): CanvasRefit | null {
 }
 
 /**
- * Stop a diagram shrinking past `MIN_DIAGRAM_SCALE` of its natural size.
+ * Republish the diagram's natural width as a custom property.
  *
- * Mermaid's inline `max-width: <natural>px` is the ceiling; this is the floor.
- * Between them the diagram tracks its column exactly as before — the floor only
- * binds once the column is narrower than 60% of the drawing, and then the
- * container's `overflow-x` takes over.
+ * It is already there as mermaid's inline `max-width`, but CSS cannot read one
+ * declaration to compute another. Exposing it lets the stylesheets express the
+ * readability floor as `calc(var(--diagram-natural) * var(--diagram-min-scale))`
+ * — so *whether* a diagram may scroll stays a CSS decision, switchable by one
+ * attribute on the document root, while this module only reports measurements.
  */
-function applyReadabilityFloor(host: HTMLElement): void {
+function publishNaturalWidth(host: HTMLElement): void {
   const svg = host.querySelector('svg');
   if (!svg) return;
   const natural = Number.parseFloat(svg.style.maxWidth);
   if (!Number.isFinite(natural) || natural <= 0) return;
-  svg.style.minWidth = `${Math.round(natural * MIN_DIAGRAM_SCALE)}px`;
+  svg.style.setProperty('--diagram-natural', `${Math.round(natural)}px`);
 }
 
-/** Repair the canvas, then bound how small the result may be drawn. */
+/** Repair the canvas, then publish the natural width the floor is taken from. */
 export function fitDiagram(host: HTMLElement): CanvasRefit | null {
-  // Order matters: a repair moves the natural width the floor is taken from.
+  // Order matters: a repair moves the natural width.
   const refit = refitDiagramCanvas(host);
-  applyReadabilityFloor(host);
+  publishNaturalWidth(host);
   return refit;
 }
 

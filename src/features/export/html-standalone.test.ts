@@ -26,15 +26,6 @@ describe('buildStandaloneHtml (FR-11.1)', () => {
     expect(html).toContain('.md-table-scroll { overflow: visible; }');
   });
 
-  it('drops the diagram readability floor on paper', async () => {
-    const html = await buildStandaloneHtml('Doc', 'x\n');
-    // On screen a wide diagram stops shrinking at 60% and scrolls. Paper has
-    // no scrollbars, so it goes back to scaling to fit the page instead of
-    // being clipped by the scroll container.
-    expect(html).toContain('.mermaid-diagram { overflow: visible; }');
-    expect(html).toContain('.mermaid-diagram svg { min-width: 0 !important; }');
-  });
-
   it('escapes the document title', async () => {
     const html = await buildStandaloneHtml('<script>alert(1)</script>', 'x\n');
     expect(html).toContain('<title>&lt;script&gt;alert(1)&lt;/script&gt;</title>');

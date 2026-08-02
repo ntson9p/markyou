@@ -10,9 +10,11 @@ import { pinMode, seedFakeFile, stubFsa } from './helpers';
  * given and is **never scaled up** past the size its own text metrics
  * produced — 16px labels stay 16px rather than ballooning on a widened page.
  *
- * The floor is ours: below 60% of natural size the labels stop being readable,
- * so the diagram stops shrinking and its container scrolls instead. Between the
- * two — the ordinary case — it simply tracks its column, and nothing scrolls.
+ * The floor is ours and opt-in (`diagramScroll`, default off): below 60% of
+ * natural size the labels stop being readable, so the diagram stops shrinking
+ * and its container scrolls instead. Between the two — the ordinary case — it
+ * simply tracks its column, and nothing scrolls either way. The preview column
+ * beside the source editor never scrolls, whatever the setting says.
  *
  * Height is left alone entirely. A `max-height` cap cannot scale an SVG whose
  * width is already definite; it clips the box and lets `preserveAspectRatio`
@@ -82,6 +84,16 @@ const TALL = [
   '',
 ].join('\n');
 
+/** Turn the opt-in diagram scrollbars on before the app boots. */
+async function enableDiagramScroll(page: Page) {
+  await page.addInitScript(() => {
+    const raw = window.localStorage.getItem('markyou.settings');
+    const persisted = raw ? JSON.parse(raw) : { state: {} };
+    persisted.state = { ...persisted.state, diagramScroll: true };
+    window.localStorage.setItem('markyou.settings', JSON.stringify({ version: 0, ...persisted }));
+  });
+}
+
 async function open(page: Page, mode: 'wysiwyg' | 'raw', measure?: number, body = DOC) {
   await pinMode(page, mode);
   if (measure !== undefined) {
@@ -137,7 +149,22 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     expect(wide.height).toBeCloseTo((wide.width * wide.naturalH) / wide.natural, -1);
   });
 
-  test('a diagram too wide to stay readable scrolls instead of shrinking', async ({ page }) => {
+  test('by default even a very wide diagram shrinks to fit, with no scrollbar', async ({
+    page,
+  }) => {
+    await open(page, 'wysiwyg', 72, VERY_WIDE);
+    await expect(page.locator('.diagram-node svg')).toBeVisible({ timeout: 30000 });
+
+    const [d] = await scan(page, '.diagram-node');
+    // Small enough to be hard to read — that is the accepted trade of the
+    // default, and why the setting exists.
+    expect(d.available / d.natural).toBeLessThan(0.6);
+    expect(d.width).toBeCloseTo(d.available, -1);
+    expect(d.scrollX).toBe(0);
+  });
+
+  test('a diagram too wide to stay readable scrolls instead, once enabled', async ({ page }) => {
+    await enableDiagramScroll(page);
     await open(page, 'wysiwyg', 72, VERY_WIDE);
     await expect(page.locator('.diagram-node svg')).toBeVisible({ timeout: 30000 });
 
@@ -226,6 +253,18 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     expect(docOverflow).toBeLessThanOrEqual(1);
   });
 
+  test('the preview column never scrolls a diagram, even with the setting on', async ({ page }) => {
+    await enableDiagramScroll(page);
+    await open(page, 'raw', undefined, VERY_WIDE);
+    await expect(page.locator('.md-doc .mermaid-diagram svg')).toBeVisible({ timeout: 30000 });
+
+    const [d] = await scan(page, '.md-doc .mermaid-diagram');
+    // Same document and setting that scrolls in the editor: here it scales.
+    expect(d.available / d.natural).toBeLessThan(0.6);
+    expect(d.width).toBeCloseTo(d.available, -1);
+    expect(d.scrollX).toBe(0);
+  });
+
   test('export renders diagrams attached, so the canvas repair can measure', async ({ page }) => {
     await page.goto('/');
     const svg = await page.evaluate(async (url) => {
@@ -239,7 +278,8 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     // `getBBox()` only reports inside the live document, so a detached render
     // silently skipped the repair and exported whatever mermaid declared —
     // including, for the diagram that prompted this, a canvas that cropped it.
-    expect(svg).toContain('min-width');
+    // The stamp is only written once the measurement succeeds.
+    expect(svg).toContain('data-refit');
     expect(svg).toContain('viewBox');
   });
 
