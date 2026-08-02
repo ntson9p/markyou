@@ -5,17 +5,19 @@ import { expect, test, type Page } from '@playwright/test';
  * (FR-5.9).
  *
  * Mermaid lays out off-screen and bakes the resulting bounds into `viewBox`.
- * Two failure shapes have been seen in the field, both fatal on screen:
+ * Three failure shapes have been seen in the field, all fatal on screen:
  *
  *  - **Canvas far too large** — `-132 -53 16518 16439` around a ~700px drawing.
  *    Everything scales to 5% and the diagram is a smudge.
  *  - **Canvas misplaced** — `-122.55 -52.73 876.96 371.60` around content at
  *    `8,8 744×359`. 130 units of dead space on the left, and the bottom 48
  *    units of the diagram cut off, because an SVG clips to its viewport.
+ *  - **Canvas far too small** — `1118` wide around a `3078`-wide flowchart, so
+ *    two of its three subgraphs were never painted.
  *
  * The repair must never fire on an honest canvas — several diagram types carry
- * real margin — and must never enlarge one, because `gantt` paints background
- * rules far outside its own box on purpose.
+ * real margin — and must never enlarge a `gantt`, the one stock type that
+ * paints outside its own box on purpose.
  */
 
 /** Served by Vite in dev; not a resolvable specifier at type-check time. */
@@ -23,11 +25,12 @@ const MODULE_URL = '/src/editors/preview/mermaid.ts';
 
 /** An SVG with an arbitrary canvas around a rect of known position and size. */
 const HARNESS = `
-  (vx, vy, vw, vh, rx, ry, rw, rh) => {
+  (vx, vy, vw, vh, rx, ry, rw, rh, role) => {
     const host = document.createElement('div');
     host.style.cssText = 'position:absolute;left:-99999px;top:0;width:1000px';
     host.innerHTML =
       '<svg width="100%" style="max-width: ' + vw + 'px;" ' +
+      (role ? 'aria-roledescription="' + role + '" ' : '') +
       'viewBox="' + vx + ' ' + vy + ' ' + vw + ' ' + vh + '">' +
       '<rect x="' + rx + '" y="' + ry + '" width="' + rw + '" height="' + rh + '" fill="red"></rect>' +
       '</svg>';
@@ -38,14 +41,14 @@ const HARNESS = `
 
 type Box = [number, number, number, number];
 
-async function repair(page: Page, canvas: Box, drawing: Box = [10, 10, 200, 100]) {
+async function repair(page: Page, canvas: Box, drawing: Box = [10, 10, 200, 100], role = '') {
   return page.evaluate(
-    async ({ harness, canvas, drawing, url }) => {
+    async ({ harness, canvas, drawing, role, url }) => {
       const mod = (await import(/* @vite-ignore */ url)) as {
         refitDiagramCanvas: (host: HTMLElement) => { from: number[]; to: number[] } | null;
       };
-      const build = eval(harness) as (...a: number[]) => HTMLElement;
-      const host = build(...canvas, ...drawing);
+      const build = eval(harness) as (...a: unknown[]) => HTMLElement;
+      const host = build(...canvas, ...drawing, role);
       const result = mod.refitDiagramCanvas(host);
       const svg = host.querySelector('svg')!;
       const after = svg.getAttribute('viewBox');
@@ -54,7 +57,7 @@ async function repair(page: Page, canvas: Box, drawing: Box = [10, 10, 200, 100]
       host.remove();
       return { result, after, cap, stamp };
     },
-    { harness: HARNESS, canvas, drawing, url: MODULE_URL },
+    { harness: HARNESS, canvas, drawing, role, url: MODULE_URL },
   );
 }
 
@@ -107,15 +110,65 @@ test.describe('diagram canvas repair (FR-5.9)', () => {
     }
   });
 
-  test('never grows a canvas that its diagram overdraws', async ({ page }) => {
+  test('grows a canvas far too small for its diagram', async ({ page }) => {
     await page.goto('/');
-    // `gantt` genuinely paints wider than it declares. The drawing is outside
-    // the canvas, so the clip check trips — but fitting would enlarge it, and
-    // honouring that would shrink the chart to a sliver.
-    const { result, after, stamp } = await repair(page, [0, 0, 60, 40]);
+    // The reported shape, verbatim: a three-subgraph flowchart painted 3078
+    // units wide inside a canvas declared 1118 wide, so two of the three
+    // subgraphs were never drawn on screen at all.
+    const { result, after, cap } = await repair(
+      page,
+      [-131.7395782470703, -35.13333511352539, 1118.5625, 413.933349609375],
+      [8, 8, 3078, 369],
+    );
+
+    expect(result).not.toBeNull();
+    expect(after).toBe('6 6 3082 373');
+    // The cap has to grow with it, or the column still crops the diagram.
+    expect(cap).toBe('3082px');
+
+    const [x, y, w, h] = (after ?? '').split(/\s+/).map(Number);
+    expect(x).toBeLessThanOrEqual(8);
+    expect(y).toBeLessThanOrEqual(8);
+    expect(x + w).toBeGreaterThanOrEqual(8 + 3078);
+    expect(y + h).toBeGreaterThanOrEqual(8 + 369);
+  });
+
+  test('never grows a diagram type that paints outside its canvas', async ({ page }) => {
+    await page.goto('/');
+    // Synthetic first, so the rule is pinned independently of mermaid's output.
+    const { result, after, stamp } = await repair(
+      page,
+      [0, 0, 60, 40],
+      [10, 10, 200, 100],
+      'gantt',
+    );
     expect(result).toBeNull();
-    expect(stamp).toBe('skipped-would-grow');
+    expect(stamp).toBe('skipped-overdrawn');
     expect(after).toBe('0 0 60 40');
+
+    // Then the real thing: a 2024 chart puts `line.today` ~35000 units out.
+    const real = await page.evaluate(async (url) => {
+      const mod = (await import(/* @vite-ignore */ url)) as {
+        renderMermaidToSvg: (code: string, dark: boolean) => Promise<string>;
+        refitDiagramCanvas: (host: HTMLElement) => unknown;
+      };
+      const host = document.createElement('div');
+      host.style.cssText = 'position:absolute;left:-99999px;top:0;width:900px';
+      document.body.appendChild(host);
+      host.innerHTML = await mod.renderMermaidToSvg(
+        'gantt\n  title A\n  section S\n  Task :a1, 2024-01-01, 30d',
+        false,
+      );
+      const svg = host.querySelector('svg')!;
+      const before = svg.getAttribute('viewBox');
+      const changed = mod.refitDiagramCanvas(host) !== null;
+      const out = { before, changed, after: svg.getAttribute('viewBox') };
+      host.remove();
+      return out;
+    }, MODULE_URL);
+
+    expect(real.changed).toBe(false);
+    expect(real.after).toBe(real.before);
   });
 
   test('every stock diagram type survives the repair untouched', async ({ page }) => {
@@ -128,6 +181,11 @@ test.describe('diagram canvas repair (FR-5.9)', () => {
       const samples: Record<string, string> = {
         flowchart: 'flowchart LR\n  A-->B-->C',
         flowchartTB: 'flowchart TB\n  subgraph S["Grp"]\n    X["Node X"]\n  end\n  X-->Y["Y"]',
+        // The reported shape: disconnected subgraphs, which dagre lays out
+        // side by side into a very wide drawing. Mermaid sizes it correctly
+        // here, so the repair must leave it alone.
+        flowchart3sub:
+          'flowchart TB\n subgraph P["P"]\n  A-->B\n end\n subgraph Q["Q"]\n  C-->D\n end\n subgraph R["R"]\n  E-->F\n end',
         sequence: 'sequenceDiagram\n  Alice->>Bob: Hi\n  Bob-->>Alice: Yo',
         class: 'classDiagram\n  Animal <|-- Duck',
         er: 'erDiagram\n  CUSTOMER ||--o{ ORDER : places',

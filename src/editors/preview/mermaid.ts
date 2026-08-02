@@ -30,6 +30,21 @@ const DIAGRAM_PADDING = 2;
  */
 const OVERSIZED_CANVAS_FACTOR = 4;
 
+/**
+ * Diagram types that paint outside their own canvas on purpose, identified by
+ * the `aria-roledescription` mermaid stamps on every SVG it emits.
+ *
+ * Only these may not have their canvas *enlarged* to enclose what they draw.
+ * `gantt` positions its "today" marker on the real calendar: a chart of
+ * January 2024 viewed in 2026 puts that one line at x≈35600 in a 1280-wide
+ * canvas. Enclosing it would squeeze the chart into a 3%-wide sliver.
+ *
+ * Measured, not assumed: rendering all 22 stock diagram types on Chromium and
+ * Firefox, `gantt` is the only one whose drawing escapes its canvas at all,
+ * and `line.today` is the only element of it that does.
+ */
+const OVERDRAWING_TYPES = new Set(['gantt']);
+
 export interface CanvasRefit {
   from: [number, number];
   to: [number, number];
@@ -39,7 +54,7 @@ export interface CanvasRefit {
  * Repair a diagram whose declared canvas does not match what it draws.
  *
  * Mermaid lays out off-screen and bakes the resulting bounds into `viewBox`.
- * That calculation goes wrong in two observed ways, both fatal on screen:
+ * That calculation goes wrong in three observed ways, all fatal on screen:
  *
  *  - **Canvas far too large.** The drawing is then scaled to a few percent to
  *    fit and the diagram appears microscopic. Seen as a 16518×16439 canvas
@@ -49,11 +64,14 @@ export interface CanvasRefit {
  *    to its viewport. Seen as `-122.55 -52.73 876.96 371.60` around content
  *    occupying `8,8 744×359`: 130 units blank on the left, 48 units of diagram
  *    missing off the bottom.
+ *  - **Canvas far too small.** Seen as a 1118-wide canvas around a 3078-wide
+ *    flowchart of three side-by-side subgraphs: two thirds of the diagram is
+ *    simply not painted, and what remains looks like a complete drawing, so
+ *    nothing about it reads as an error.
  *
  * Once the SVG is in the live document its real bounds are measurable, so
- * re-fit the canvas to them. Never enlarge: `gantt` paints background rules far
- * outside its declared canvas, and honouring those would shrink the chart to a
- * sliver.
+ * re-fit the canvas to them — in either direction, since a canvas can be wrong
+ * either way. `OVERDRAWING_TYPES` is the sole exception to enlarging.
  *
  * Returns what it changed, or null if the canvas was already honest.
  */
@@ -90,10 +108,9 @@ export function refitDiagramCanvas(host: HTMLElement): CanvasRefit | null {
 
   const width = drawn.width + DIAGRAM_PADDING * 2;
   const height = drawn.height + DIAGRAM_PADDING * 2;
-  if (width > declared[2] + 1 || height > declared[3] + 1) {
-    // Fitting would grow the canvas — that is `gantt`, drawing far past its own
-    // box on purpose. Leave it exactly as mermaid emitted it.
-    svg.dataset.refit = 'skipped-would-grow';
+  const grows = width > declared[2] + 1 || height > declared[3] + 1;
+  if (grows && OVERDRAWING_TYPES.has(svg.getAttribute('aria-roledescription') ?? '')) {
+    svg.dataset.refit = 'skipped-overdrawn';
     return null;
   }
 
