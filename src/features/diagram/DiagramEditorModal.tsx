@@ -5,7 +5,7 @@ import { useUiStore } from '@/app/store/ui';
 import { SplitPane } from '@/components/SplitPane';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { refitOversizedCanvas, renderMermaidToSvg } from '@/editors/preview/mermaid';
+import { refitDiagramCanvas, renderMermaidToSvg } from '@/editors/preview/mermaid';
 import { useDiagramEditorStore, type DiagramEditorSession } from '@/features/diagram/store';
 import { useResolvedTheme } from '@/features/settings/theme';
 
@@ -75,7 +75,7 @@ function DiagramSessionEditor({ session }: { session: DiagramEditorSession }) {
           // document-provided HTML is injected (§7 security).
           if (previewRef.current) {
             previewRef.current.innerHTML = svg;
-            refitOversizedCanvas(previewRef.current);
+            refitDiagramCanvas(previewRef.current);
           }
           setError(null);
         })

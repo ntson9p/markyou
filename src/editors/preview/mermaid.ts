@@ -39,19 +39,25 @@ export interface CanvasRefit {
  * Repair a diagram whose declared canvas does not match what it draws.
  *
  * Mermaid lays out off-screen and bakes the resulting bounds into `viewBox`.
- * That measurement can come out wildly too large — an HTML label inside a
- * `foreignObject` that has not been laid out yet reports a clamped 16384px, and
- * the canvas is sized to enclose it. The drawing itself is fine, but it is then
- * scaled to a few percent to fit a canvas 20× too big, so the diagram appears
- * microscopic and no amount of CSS can recover it.
+ * That calculation goes wrong in two observed ways, both fatal on screen:
+ *
+ *  - **Canvas far too large.** The drawing is then scaled to a few percent to
+ *    fit and the diagram appears microscopic. Seen as a 16518×16439 canvas
+ *    around a ~700px drawing.
+ *  - **Canvas misplaced.** The origin lands away from the drawing, so one edge
+ *    carries dead space and the opposite edge cuts content off — an SVG clips
+ *    to its viewport. Seen as `-122.55 -52.73 876.96 371.60` around content
+ *    occupying `8,8 744×359`: 130 units blank on the left, 48 units of diagram
+ *    missing off the bottom.
  *
  * Once the SVG is in the live document its real bounds are measurable, so
- * re-fit the canvas to them. Shrink only: `gantt` legitimately draws *past* its
- * declared canvas, and growing to meet that would wreck it.
+ * re-fit the canvas to them. Never enlarge: `gantt` paints background rules far
+ * outside its declared canvas, and honouring those would shrink the chart to a
+ * sliver.
  *
  * Returns what it changed, or null if the canvas was already honest.
  */
-export function refitOversizedCanvas(host: HTMLElement): CanvasRefit | null {
+export function refitDiagramCanvas(host: HTMLElement): CanvasRefit | null {
   const svg = host.querySelector('svg');
   if (!svg?.isConnected) return null;
 
@@ -68,15 +74,29 @@ export function refitOversizedCanvas(host: HTMLElement): CanvasRefit | null {
   }
   if (!(drawn.width > 0) || !(drawn.height > 0)) return null;
 
-  const tooWide = declared[2] >= drawn.width * OVERSIZED_CANVAS_FACTOR;
-  const tooTall = declared[3] >= drawn.height * OVERSIZED_CANVAS_FACTOR;
-  if (!tooWide && !tooTall) {
+  const oversized =
+    declared[2] >= drawn.width * OVERSIZED_CANVAS_FACTOR ||
+    declared[3] >= drawn.height * OVERSIZED_CANVAS_FACTOR;
+  // A hair of tolerance so sub-pixel bounds never trip the repair.
+  const clipped =
+    drawn.x < declared[0] - 1 ||
+    drawn.y < declared[1] - 1 ||
+    drawn.x + drawn.width > declared[0] + declared[2] + 1 ||
+    drawn.y + drawn.height > declared[1] + declared[3] + 1;
+  if (!oversized && !clipped) {
     svg.dataset.refit = 'no';
     return null;
   }
 
   const width = drawn.width + DIAGRAM_PADDING * 2;
   const height = drawn.height + DIAGRAM_PADDING * 2;
+  if (width > declared[2] + 1 || height > declared[3] + 1) {
+    // Fitting would grow the canvas — that is `gantt`, drawing far past its own
+    // box on purpose. Leave it exactly as mermaid emitted it.
+    svg.dataset.refit = 'skipped-would-grow';
+    return null;
+  }
+
   svg.setAttribute(
     'viewBox',
     `${drawn.x - DIAGRAM_PADDING} ${drawn.y - DIAGRAM_PADDING} ${width} ${height}`,
@@ -90,7 +110,7 @@ export function refitOversizedCanvas(host: HTMLElement): CanvasRefit | null {
 /** Re-fit once the host is actually in the document, where bounds are real. */
 export function refitWhenAttached(host: HTMLElement, attempts = 3): void {
   if (host.isConnected) {
-    refitOversizedCanvas(host);
+    refitDiagramCanvas(host);
     return;
   }
   if (attempts > 0) requestAnimationFrame(() => refitWhenAttached(host, attempts - 1));
@@ -166,7 +186,7 @@ export async function renderMermaidBlocks(root: HTMLElement, dark: boolean): Pro
       // The DOM may have re-rendered while we were awaiting.
       if (pre.isConnected) {
         pre.replaceWith(container);
-        refitOversizedCanvas(container);
+        refitDiagramCanvas(container);
       }
     }),
   );

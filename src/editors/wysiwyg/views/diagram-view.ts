@@ -49,7 +49,20 @@ function appendSizeBadge(el: HTMLElement): void {
     // A canvas past this is never a real diagram (the widest stock type is
     // ~1300); it means a stray element dragged the bounds out.
     const absurd = natural >= 8000 || vb[3] >= 8000;
-    if (!absurd && scale > 0.25) return;
+
+    // Drawing outside the declared window: an SVG clips to its viewport, so
+    // this is exactly the "diagram cut off at the bottom" symptom.
+    const overRight = content ? content.x + content.width - (vb[0] + vb[2]) : 0;
+    const overBottom = content ? content.y + content.height - (vb[1] + vb[3]) : 0;
+    const clipped = overRight > 1 || overBottom > 1;
+
+    // Element box shaped differently from the canvas: preserveAspectRatio then
+    // shrinks the drawing and pads the sides instead of filling.
+    const vbAspect = vb[2] > 0 && vb[3] > 0 ? vb[2] / vb[3] : 0;
+    const boxAspect = rect.height > 0 ? rect.width / rect.height : vbAspect;
+    const letterboxed = vbAspect > 0 && Math.abs(boxAspect - vbAspect) / vbAspect > 0.02;
+
+    if (!absurd && !clipped && !letterboxed && scale > 0.25) return;
 
     // Name the elements defining the extremes — that is the culprit. Screen
     // space is the only frame comparable across nested transforms, so measure
@@ -81,7 +94,10 @@ function appendSizeBadge(el: HTMLElement): void {
       `drawn: ${Math.round(rect.width)}x${Math.round(rect.height)}`,
       `scale: ${scale.toFixed(3)}`,
       `refit: ${svg.dataset.refit ?? 'no'}`,
-      `maxRight: ${tag(right?.el)}@${Math.round(right?.v ?? 0)}`,
+      `over: R${Math.round(overRight)} B${Math.round(overBottom)}`,
+      `aspect: vb ${vbAspect.toFixed(2)} vs box ${boxAspect.toFixed(2)}`,
+      `hAttr: ${svg.getAttribute('height') ?? '-'}`,
+      `nodeH: ${Math.round(el.getBoundingClientRect().height)}`,
       `maxBottom: ${tag(bottom?.el)}@${Math.round(bottom?.v ?? 0)}`,
       `biggest: ${tag(biggest?.el)} area~${Math.round(Math.sqrt(biggest?.a ?? 0))}sq`,
     ].join('  |  ');
