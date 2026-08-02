@@ -70,7 +70,10 @@ export function refitOversizedCanvas(host: HTMLElement): CanvasRefit | null {
 
   const tooWide = declared[2] >= drawn.width * OVERSIZED_CANVAS_FACTOR;
   const tooTall = declared[3] >= drawn.height * OVERSIZED_CANVAS_FACTOR;
-  if (!tooWide && !tooTall) return null;
+  if (!tooWide && !tooTall) {
+    svg.dataset.refit = 'no';
+    return null;
+  }
 
   const width = drawn.width + DIAGRAM_PADDING * 2;
   const height = drawn.height + DIAGRAM_PADDING * 2;
@@ -80,6 +83,7 @@ export function refitOversizedCanvas(host: HTMLElement): CanvasRefit | null {
   );
   // The stale cap would otherwise still advertise the bogus natural width.
   svg.style.maxWidth = `${width}px`;
+  svg.dataset.refit = `${Math.round(declared[2])}x${Math.round(declared[3])}->${Math.round(width)}x${Math.round(height)}`;
   return { from: [declared[2], declared[3]], to: [width, height] };
 }
 

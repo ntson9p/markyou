@@ -32,15 +32,6 @@ function boxOf(node: Element): DOMRect | null {
   }
 }
 
-function describe(node: Element, box: DOMRect): string {
-  const cls = (node.getAttribute('class') ?? '').split(/\s+/)[0] || '-';
-  const id = node.getAttribute('id') ?? '';
-  return (
-    `${node.tagName}.${cls}${id ? `#${id.slice(0, 14)}` : ''} ` +
-    `${Math.round(box.width)}x${Math.round(box.height)}@${Math.round(box.x)},${Math.round(box.y)}`
-  );
-}
-
 function appendSizeBadge(el: HTMLElement): void {
   if (!DEBUG_DIAGRAM_SIZE) return;
   const svg = el.querySelector('svg');
@@ -50,28 +41,49 @@ function appendSizeBadge(el: HTMLElement): void {
     if (!svg.isConnected) return;
     const rect = svg.getBoundingClientRect();
     const viewBox = svg.getAttribute('viewBox') ?? '(none)';
-    const natural = Number.parseFloat(viewBox.split(/\s+/)[2] ?? 'NaN');
-    const scale = Number.isFinite(natural) ? rect.width / natural : 1;
+    const vb = viewBox.split(/\s+/).map(Number);
+    const natural = vb[2];
+    const scale = Number.isFinite(natural) && natural > 0 ? rect.width / natural : 1;
     const content = boxOf(svg);
 
-    // Quiet unless the canvas is still bigger than the drawing after repair.
-    // A low scale on its own is not a fault — a large diagram in a narrow
-    // column is legitimately scaled well below 1.
-    const stillOversized =
-      content !== null &&
-      content.width > 0 &&
-      Number.isFinite(natural) &&
-      natural >= content.width * 4;
-    if (!stillOversized) return;
+    // A canvas past this is never a real diagram (the widest stock type is
+    // ~1300); it means a stray element dragged the bounds out.
+    const absurd = natural >= 8000 || vb[3] >= 8000;
+    if (!absurd && scale > 0.25) return;
+
+    // Name the elements defining the extremes — that is the culprit. Screen
+    // space is the only frame comparable across nested transforms, so measure
+    // there and convert back to viewBox units.
+    const perUnit = rect.width > 0 && natural > 0 ? rect.width / natural : 1;
+    let right: { el: Element; v: number } | null = null;
+    let bottom: { el: Element; v: number } | null = null;
+    let biggest: { el: Element; a: number; box: DOMRect } | null = null;
+    for (const node of svg.querySelectorAll(
+      'path,rect,circle,ellipse,line,polygon,polyline,text,image,foreignObject',
+    )) {
+      const r = node.getBoundingClientRect();
+      if (r.width <= 0 && r.height <= 0) continue;
+      const vx = vb[0] + (r.right - rect.left) / perUnit;
+      const vy = vb[1] + (r.bottom - rect.top) / perUnit;
+      if (!right || vx > right.v) right = { el: node, v: vx };
+      if (!bottom || vy > bottom.v) bottom = { el: node, v: vy };
+      const area = (r.width * r.height) / (perUnit * perUnit);
+      if (!biggest || area > biggest.a) biggest = { el: node, a: area, box: r };
+    }
+    const tag = (n: Element | undefined) =>
+      n ? `${n.tagName}.${(n.getAttribute('class') ?? '-').split(/\s+/)[0] || '-'}` : '?';
 
     const badge = document.createElement('div');
     badge.className = 'diagram-debug-badge';
     badge.textContent = [
       `viewBox: ${viewBox}`,
+      `bbox: ${content ? `${Math.round(content.width)}x${Math.round(content.height)}@${Math.round(content.x)},${Math.round(content.y)}` : 'none'}`,
       `drawn: ${Math.round(rect.width)}x${Math.round(rect.height)}`,
-      `col: ${el.clientWidth}`,
       `scale: ${scale.toFixed(3)}`,
-      `content: ${content ? describe(svg, content) : 'unmeasurable'}`,
+      `refit: ${svg.dataset.refit ?? 'no'}`,
+      `maxRight: ${tag(right?.el)}@${Math.round(right?.v ?? 0)}`,
+      `maxBottom: ${tag(bottom?.el)}@${Math.round(bottom?.v ?? 0)}`,
+      `biggest: ${tag(biggest?.el)} area~${Math.round(Math.sqrt(biggest?.a ?? 0))}sq`,
     ].join('  |  ');
     el.appendChild(badge);
   });
