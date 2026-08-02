@@ -837,10 +837,17 @@ body > div[data-show] .link-preview,
    * edge as the numbering crosses into two digits. */
   min-width: 1.5rem;
   justify-content: center;
-  color: var(--primary);
   cursor: pointer;
   user-select: none;
   line-height: inherit;
+}
+
+/* Bullets and numbers inherit the document foreground, like the `::marker` the
+ * preview draws (FR-4.4) — an accent colour reads as a control, and these are
+ * not clickable. A task checkbox is, so it keeps the accent (the preview tints
+ * its checkbox with `accent-color` for the same reason). */
+.wysiwyg-root .milkdown-list-item-block .label:is(.checked, .unchecked) {
+  color: var(--primary);
 }
 
 /* Ordered markers hug the content column like native `ol` markers do, so

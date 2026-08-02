@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { seedFakeFile, stubFsa } from './helpers';
+
 /** M4 WYSIWYG UX polish: bubble menu (FR-5.4), slash menu (FR-5.5),
  *  block handles + insert-below (FR-5.6), empty-doc placeholder. */
 
@@ -132,6 +134,56 @@ test.describe('WYSIWYG UX polish (M4)', () => {
       expect(row.textLeft).toBeCloseTo(rows[0].textLeft, 0);
       expect(row.markerRight).toBeCloseTo(rows[0].markerRight, 0);
     }
+  });
+
+  test('list markers match the preview: disc bullets in the document colour (FR-4.4)', async ({
+    page,
+  }) => {
+    await stubFsa(page);
+    await seedFakeFile(
+      page,
+      'lists.md',
+      '- bullet item\n\n1. ordered item\n\n- [ ] task item\n- [x] done item\n',
+    );
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page)).toBeVisible({ timeout: 30000 });
+    await expect(editor(page).locator('.milkdown-list-item-block')).toHaveCount(4);
+
+    const markers = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const label = document.querySelector<HTMLElement>(selector);
+        if (!label) return null;
+        const item = label.closest('.milkdown-list-item-block')!;
+        const text = item.querySelector<HTMLElement>('.content-dom > *')!;
+        return {
+          glyph: label.textContent ?? '',
+          color: getComputedStyle(label).color,
+          textColor: getComputedStyle(text).color,
+        };
+      };
+      return {
+        bullet: read('.label.bullet'),
+        ordered: read('.label.ordered'),
+        unchecked: read('.label.unchecked'),
+        checked: read('.label.checked'),
+      };
+    });
+
+    // A plain disc, not the component's default `⦿` (U+29BF CIRCLED BULLET),
+    // which reads as a selected radio button.
+    expect(markers.bullet?.glyph).toBe('•');
+    expect(markers.bullet?.glyph).not.toBe('⦿');
+
+    // Markers are not controls, so they take the document's text colour like
+    // the `::marker` the preview draws for the same markdown.
+    expect(markers.bullet?.color).toBe(markers.bullet?.textColor);
+    expect(markers.ordered?.color).toBe(markers.ordered?.textColor);
+
+    // A checkbox *is* a control (clicking it toggles the item), so it keeps the
+    // accent colour — the preview tints its checkbox for the same reason.
+    expect(markers.unchecked?.color).not.toBe(markers.unchecked?.textColor);
+    expect(markers.checked?.color).not.toBe(markers.checked?.textColor);
   });
 
   test('block handle appears on hover and inserts a block below (FR-5.6)', async ({ page }) => {

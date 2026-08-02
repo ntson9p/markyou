@@ -49,6 +49,7 @@ import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
 import { findPlugin } from './plugins/find';
 import { imagePastePlugin } from './plugins/image-paste';
 import { listA11yPlugin } from './plugins/list-a11y';
+import { configureListItemBlock } from './plugins/list-item-block';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { configureTableBlock, tableHandleResetPlugin } from './plugins/table-block';
@@ -199,6 +200,9 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
         // Table handles/alignment controls (FR-5.7) — icons instead of the
         // component's text placeholders.
         configureTableBlock(ctx);
+        // List markers (FR-4.4) — the component draws its own; match the
+        // preview's `disc`.
+        configureListItemBlock(ctx);
         // WYSIWYG UX polish (M4): bubble menu, slash commands, block handles.
         configureBubbleMenu(ctx);
         configureSlashMenu(ctx);
