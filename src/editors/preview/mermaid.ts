@@ -105,10 +105,23 @@ async function getMermaid(dark: boolean): Promise<MermaidModule> {
     // an inline `max-width:<natural layout width>px`, which is exactly the rule
     // we want — fill the column, never scale up past natural size. Sizing below
     // that is CSS's business (see `.diagram-node` / `.mermaid-diagram`).
+    //
+    // `htmlLabels: false` is load-bearing, not cosmetic. With HTML labels,
+    // mermaid renders each label into a `<foreignObject>`, measures it with
+    // `getBoundingClientRect()` — CSS pixels — and then uses those numbers as
+    // SVG *user units*. That equivalence only holds when the measuring context
+    // sits at scale 1, and it is the one place in the pipeline that crosses
+    // coordinate systems. When it goes wrong the node boxes inflate while the
+    // text inside them stays true size, so the whole diagram is laid out ~20×
+    // too large and scales down to an unreadable smudge — reported from the
+    // field as a 16902×8478 layout for a diagram that measures 701×396 here.
+    // SVG `<text>` labels are measured with `getBBox()` in user units, so no
+    // conversion is involved and the failure cannot occur.
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
       theme,
+      htmlLabels: false,
       flowchart: { diagramPadding: DIAGRAM_PADDING },
     });
     initializedTheme = theme;
