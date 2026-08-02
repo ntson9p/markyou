@@ -10,6 +10,16 @@ export async function renderDocumentHtml(body: string): Promise<string> {
   const html = await renderMarkdown(body);
   const container = document.createElement('div');
   container.innerHTML = html;
-  await renderMermaidBlocks(container, false);
-  return container.innerHTML;
+  // Off-screen but *attached*: the diagram canvas repair measures what mermaid
+  // actually painted with `getBBox()`, which only reports inside the live
+  // document. Rendered detached, an export silently kept whatever broken
+  // canvas mermaid declared — and a clipped diagram exports clipped.
+  container.style.cssText = 'position:absolute;left:-99999px;top:0;width:46rem';
+  document.body.appendChild(container);
+  try {
+    await renderMermaidBlocks(container, false);
+    return container.innerHTML;
+  } finally {
+    container.remove();
+  }
 }

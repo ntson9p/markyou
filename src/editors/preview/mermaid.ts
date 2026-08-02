@@ -45,6 +45,19 @@ const OVERSIZED_CANVAS_FACTOR = 4;
  */
 const OVERDRAWING_TYPES = new Set(['gantt']);
 
+/**
+ * How far a diagram may be scaled down to fit its column before legibility
+ * matters more than fitting.
+ *
+ * Mermaid's own `max-width` scales a diagram to whatever column it lands in,
+ * which is right until the column is much narrower than the drawing. Three
+ * disconnected subgraphs in a `flowchart TB` are laid out side by side into a
+ * ~7.5:1 drawing; at prose width that is 0.31 and the labels are unreadable.
+ * Past this floor the diagram keeps its size and its container scrolls
+ * instead — the same trade `.md-table-scroll` makes for a wide table.
+ */
+const MIN_DIAGRAM_SCALE = 0.6;
+
 export interface CanvasRefit {
   from: [number, number];
   to: [number, number];
@@ -124,10 +137,34 @@ export function refitDiagramCanvas(host: HTMLElement): CanvasRefit | null {
   return { from: [declared[2], declared[3]], to: [width, height] };
 }
 
-/** Re-fit once the host is actually in the document, where bounds are real. */
+/**
+ * Stop a diagram shrinking past `MIN_DIAGRAM_SCALE` of its natural size.
+ *
+ * Mermaid's inline `max-width: <natural>px` is the ceiling; this is the floor.
+ * Between them the diagram tracks its column exactly as before — the floor only
+ * binds once the column is narrower than 60% of the drawing, and then the
+ * container's `overflow-x` takes over.
+ */
+function applyReadabilityFloor(host: HTMLElement): void {
+  const svg = host.querySelector('svg');
+  if (!svg) return;
+  const natural = Number.parseFloat(svg.style.maxWidth);
+  if (!Number.isFinite(natural) || natural <= 0) return;
+  svg.style.minWidth = `${Math.round(natural * MIN_DIAGRAM_SCALE)}px`;
+}
+
+/** Repair the canvas, then bound how small the result may be drawn. */
+export function fitDiagram(host: HTMLElement): CanvasRefit | null {
+  // Order matters: a repair moves the natural width the floor is taken from.
+  const refit = refitDiagramCanvas(host);
+  applyReadabilityFloor(host);
+  return refit;
+}
+
+/** Fit once the host is actually in the document, where bounds are real. */
 export function refitWhenAttached(host: HTMLElement, attempts = 3): void {
   if (host.isConnected) {
-    refitDiagramCanvas(host);
+    fitDiagram(host);
     return;
   }
   if (attempts > 0) requestAnimationFrame(() => refitWhenAttached(host, attempts - 1));
@@ -203,7 +240,7 @@ export async function renderMermaidBlocks(root: HTMLElement, dark: boolean): Pro
       // The DOM may have re-rendered while we were awaiting.
       if (pre.isConnected) {
         pre.replaceWith(container);
-        refitDiagramCanvas(container);
+        fitDiagram(container);
       }
     }),
   );

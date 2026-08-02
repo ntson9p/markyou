@@ -5,13 +5,19 @@ import { pinMode, seedFakeFile, stubFsa } from './helpers';
 /**
  * Mermaid diagrams size to their column (FR-5.9).
  *
- * The rule is deliberately mermaid's own: `width="100%"` with an inline
+ * The ceiling is mermaid's own: `width="100%"` with an inline
  * `max-width:<natural layout width>px`, so a diagram fills the column it is
  * given and is **never scaled up** past the size its own text metrics
  * produced — 16px labels stay 16px rather than ballooning on a widened page.
- * Too wide for the column and it scales down; too tall and `max-height` scales
- * it down as well, since an SVG carries an intrinsic ratio. No scrollbars: a
- * diagram is read as a whole.
+ *
+ * The floor is ours: below 60% of natural size the labels stop being readable,
+ * so the diagram stops shrinking and its container scrolls instead. Between the
+ * two — the ordinary case — it simply tracks its column, and nothing scrolls.
+ *
+ * Height is left alone entirely. A `max-height` cap cannot scale an SVG whose
+ * width is already definite; it clips the box and lets `preserveAspectRatio`
+ * shrink the drawing inside it, which is how a tall diagram once came out tiny
+ * and ringed with blank.
  */
 
 const WIDE = [
@@ -39,6 +45,28 @@ const DOC = [
   '```mermaid',
   'graph TD;',
   '  A-->B;',
+  '```',
+  '',
+].join('\n');
+
+/**
+ * Disconnected subgraphs: dagre lays them side by side, so this is very wide
+ * however tall the page is. At prose width it would otherwise render at ~0.3.
+ */
+const VERY_WIDE = [
+  '## Very wide',
+  '',
+  '```mermaid',
+  'flowchart TB',
+  '  subgraph P["Patient sees fewer times"]',
+  '    A["Option toggled - N changes"] --> B["Calendar re-filtered"]',
+  '  end',
+  '  subgraph S["Server rejects (safety net)"]',
+  '    G["Wrong (start,end) length vs N"] --> H["INVALID_BOOKING_TIME"]',
+  '  end',
+  '  subgraph C["Two patients, overlapping spans"]',
+  '    N1["Both pass FE filter"] --> R["Race on counters"]',
+  '  end',
   '```',
   '',
 ].join('\n');
@@ -109,6 +137,35 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
     expect(wide.height).toBeCloseTo((wide.width * wide.naturalH) / wide.natural, -1);
   });
 
+  test('a diagram too wide to stay readable scrolls instead of shrinking', async ({ page }) => {
+    await open(page, 'wysiwyg', 72, VERY_WIDE);
+    await expect(page.locator('.diagram-node svg')).toBeVisible({ timeout: 30000 });
+
+    const [d] = await scan(page, '.diagram-node');
+    // Fitting this to the column would mean well under the 0.6 floor.
+    expect(d.available / d.natural).toBeLessThan(0.6);
+    expect(d.width).toBe(Math.round(d.natural * 0.6));
+    // So the column scrolls, and the diagram keeps its proportions.
+    expect(d.scrollX).toBeGreaterThan(0);
+    expect(d.height).toBeCloseTo((d.width * d.naturalH) / d.natural, -1);
+
+    // The overflow stays inside the diagram: a `min-width` that escapes its
+    // scroll container is what once pushed the whole page off-screen.
+    const blownOutBy = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(blownOutBy).toBe(0);
+
+    // And the left edge is reachable — centring an overflowing child would put
+    // it outside the scroll range.
+    const leftEdge = await page.evaluate(() => {
+      const host = document.querySelector<HTMLElement>('.diagram-node')!;
+      const svg = host.querySelector('svg')!;
+      return Math.round(svg.getBoundingClientRect().left - host.getBoundingClientRect().left);
+    });
+    expect(leftEdge).toBeGreaterThanOrEqual(0);
+  });
+
   test('a diagram is never scaled up past its natural size', async ({ page }) => {
     await open(page, 'wysiwyg', 160); // far wider than either diagram
     await expect(page.locator('.diagram-node svg')).toHaveCount(2, { timeout: 30000 });
@@ -167,6 +224,23 @@ test.describe('mermaid diagram width (FR-5.9)', () => {
       return doc.scrollWidth - doc.clientWidth;
     });
     expect(docOverflow).toBeLessThanOrEqual(1);
+  });
+
+  test('export renders diagrams attached, so the canvas repair can measure', async ({ page }) => {
+    await page.goto('/');
+    const svg = await page.evaluate(async (url) => {
+      const mod = (await import(/* @vite-ignore */ url)) as {
+        renderDocumentHtml: (body: string) => Promise<string>;
+      };
+      const html = await mod.renderDocumentHtml('```mermaid\nflowchart LR\n  A-->B-->C\n```\n');
+      return /<svg[^>]*>/.exec(html)?.[0] ?? '';
+    }, '/src/features/export/render-doc.ts');
+
+    // `getBBox()` only reports inside the live document, so a detached render
+    // silently skipped the repair and exported whatever mermaid declared —
+    // including, for the diagram that prompted this, a canvas that cropped it.
+    expect(svg).toContain('min-width');
+    expect(svg).toContain('viewBox');
   });
 
   test('a long code line does not push the page off-screen', async ({ page }) => {

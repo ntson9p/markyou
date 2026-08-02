@@ -87,15 +87,27 @@
   border-color: var(--border);
 }
 
-/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`: fills
-   the column, never scales up past natural size.
+/* Width is mermaid's own inline `width:100%` + `max-width:<natural>px`, floored
+   by the inline `min-width` that `applyReadabilityFloor` adds: fills the
+   column, never scales up past natural size, never shrinks below 60% of it.
+   That floor is why this scrolls — past it the diagram stops shrinking and the
+   overflow has to go somewhere other than the page.
 
-   Deliberately no `max-height`. Because that width is definite, a height cap
+   Deliberately no `max-height`. Because the width is definite, a height cap
    does not scale the diagram down — it clips the box and lets
    `preserveAspectRatio` shrink the drawing inside it, so a tall diagram ends
    up small and ringed with blank. A tall diagram is simply tall; the page
    already scrolls. */
+.diagram-node {
+  overflow-x: auto;
+}
+
+/* `display: block` so the auto margins centre it, and so they collapse to zero
+   when it overflows — `text-align: center` on the parent would instead centre
+   the overflow and put the left edge out of scroll range. */
 .diagram-node svg {
+  display: block;
+  height: auto;
   margin: 0 auto;
 }
 
