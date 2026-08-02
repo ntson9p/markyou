@@ -15,96 +15,6 @@ function isDark(): boolean {
   return document.documentElement.classList.contains('dark');
 }
 
-/**
- * TEMPORARY diagnostic — REMOVE once the diagram-sizing report is closed.
- *
- * Prints the numbers that separate "mermaid produced a tiny drawing" from
- * "our layout shrank a correctly-sized one", so the answer can be read off a
- * screenshot instead of a console session.
- */
-const DEBUG_DIAGRAM_SIZE = true;
-
-function boxOf(node: Element): DOMRect | null {
-  try {
-    return (node as SVGGraphicsElement).getBBox();
-  } catch {
-    return null;
-  }
-}
-
-function appendSizeBadge(el: HTMLElement): void {
-  if (!DEBUG_DIAGRAM_SIZE) return;
-  const svg = el.querySelector('svg');
-  if (!svg) return;
-  // After layout, so the measured boxes are the real ones.
-  requestAnimationFrame(() => {
-    if (!svg.isConnected) return;
-    const rect = svg.getBoundingClientRect();
-    const viewBox = svg.getAttribute('viewBox') ?? '(none)';
-    const vb = viewBox.split(/\s+/).map(Number);
-    const natural = vb[2];
-    const scale = Number.isFinite(natural) && natural > 0 ? rect.width / natural : 1;
-    const content = boxOf(svg);
-
-    // A canvas past this is never a real diagram (the widest stock type is
-    // ~1300); it means a stray element dragged the bounds out.
-    const absurd = natural >= 8000 || vb[3] >= 8000;
-
-    // Drawing outside the declared window: an SVG clips to its viewport, so
-    // this is exactly the "diagram cut off at the bottom" symptom.
-    const overRight = content ? content.x + content.width - (vb[0] + vb[2]) : 0;
-    const overBottom = content ? content.y + content.height - (vb[1] + vb[3]) : 0;
-    const clipped = overRight > 1 || overBottom > 1;
-
-    // Element box shaped differently from the canvas: preserveAspectRatio then
-    // shrinks the drawing and pads the sides instead of filling.
-    const vbAspect = vb[2] > 0 && vb[3] > 0 ? vb[2] / vb[3] : 0;
-    const boxAspect = rect.height > 0 ? rect.width / rect.height : vbAspect;
-    const letterboxed = vbAspect > 0 && Math.abs(boxAspect - vbAspect) / vbAspect > 0.02;
-
-    if (!absurd && !clipped && !letterboxed && scale > 0.25) return;
-
-    // Name the elements defining the extremes — that is the culprit. Screen
-    // space is the only frame comparable across nested transforms, so measure
-    // there and convert back to viewBox units.
-    const perUnit = rect.width > 0 && natural > 0 ? rect.width / natural : 1;
-    let right: { el: Element; v: number } | null = null;
-    let bottom: { el: Element; v: number } | null = null;
-    let biggest: { el: Element; a: number; box: DOMRect } | null = null;
-    for (const node of svg.querySelectorAll(
-      'path,rect,circle,ellipse,line,polygon,polyline,text,image,foreignObject',
-    )) {
-      const r = node.getBoundingClientRect();
-      if (r.width <= 0 && r.height <= 0) continue;
-      const vx = vb[0] + (r.right - rect.left) / perUnit;
-      const vy = vb[1] + (r.bottom - rect.top) / perUnit;
-      if (!right || vx > right.v) right = { el: node, v: vx };
-      if (!bottom || vy > bottom.v) bottom = { el: node, v: vy };
-      const area = (r.width * r.height) / (perUnit * perUnit);
-      if (!biggest || area > biggest.a) biggest = { el: node, a: area, box: r };
-    }
-    const tag = (n: Element | undefined) =>
-      n ? `${n.tagName}.${(n.getAttribute('class') ?? '-').split(/\s+/)[0] || '-'}` : '?';
-
-    const badge = document.createElement('div');
-    badge.className = 'diagram-debug-badge';
-    badge.textContent = [
-      `viewBox: ${viewBox}`,
-      `bbox: ${content ? `${Math.round(content.width)}x${Math.round(content.height)}@${Math.round(content.x)},${Math.round(content.y)}` : 'none'}`,
-      `drawn: ${Math.round(rect.width)}x${Math.round(rect.height)}`,
-      `scale: ${scale.toFixed(3)}`,
-      `refit: ${svg.dataset.refit ?? 'no'}`,
-      `over: R${Math.round(overRight)} B${Math.round(overBottom)}`,
-      `aspect: vb ${vbAspect.toFixed(2)} vs box ${boxAspect.toFixed(2)}`,
-      `hAttr: ${svg.getAttribute('height') ?? '-'}`,
-      `nodeH: ${Math.round(el.getBoundingClientRect().height)}`,
-      `maxBottom: ${tag(bottom?.el)}@${Math.round(bottom?.v ?? 0)}`,
-      `biggest: ${tag(biggest?.el)} area~${Math.round(Math.sqrt(biggest?.a ?? 0))}sq`,
-    ].join('  |  ');
-    el.appendChild(badge);
-  });
-}
-
 async function renderDiagram(el: HTMLElement, code: string): Promise<void> {
   if (!code.trim()) {
     el.innerHTML = '';
@@ -118,7 +28,6 @@ async function renderDiagram(el: HTMLElement, code: string): Promise<void> {
     // Rendered locally with securityLevel:'strict'; no document HTML injected.
     el.innerHTML = await renderMermaidToSvg(code, isDark());
     refitWhenAttached(el);
-    appendSizeBadge(el);
   } catch (err) {
     el.innerHTML = '';
     const error = document.createElement('div');

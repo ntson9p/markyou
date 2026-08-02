@@ -99,20 +99,6 @@
   margin: 0 auto;
 }
 
-/* TEMPORARY diagnostic badge — REMOVE with `DEBUG_DIAGRAM_SIZE`. */
-.diagram-debug-badge {
-  margin-top: 0.4rem;
-  padding: 0.25rem 0.4rem;
-  border-radius: 0.25rem;
-  background: #b91c1c;
-  color: #fff;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  line-height: 1.4;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
 /* ---------- raw HTML chips (FR-5.11) ---------- */
 
 .html-chip {
