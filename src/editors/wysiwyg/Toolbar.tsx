@@ -163,175 +163,192 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
   const disabled = editor === null;
 
   return (
-    <div
-      ref={toolbarRef}
-      role="toolbar"
-      aria-label="Formatting"
-      className={cn(
-        'flex items-center gap-0.5 border-b border-border bg-background px-2 py-1',
-        // Mobile: one scrollable row of priority actions; desktop wraps.
-        'flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible',
-        '[&>*]:shrink-0',
-      )}
-      data-testid="wysiwyg-toolbar"
-    >
-      <ToolbarButton label="Undo (Ctrl+Z)" disabled={disabled} onClick={() => run(undoCommand.key)}>
-        <Undo2 className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton label="Redo (Ctrl+Y)" disabled={disabled} onClick={() => run(redoCommand.key)}>
-        <Redo2 className="size-4" />
-      </ToolbarButton>
+    // Desktop: the sparse toolbar would leave a mostly-empty full-width bar,
+    // so it floats instead as a centred island on the page surface — the same
+    // design language as the page card, and on the app's centre axis (mode
+    // switcher above, page below). Mobile keeps the edge-to-edge scrollable row.
+    <div className="shrink-0 md:flex md:justify-center md:bg-muted/30 md:px-4 md:pt-3 md:pb-1">
+      <div
+        ref={toolbarRef}
+        role="toolbar"
+        aria-label="Formatting"
+        className={cn(
+          'flex items-center gap-0.5 border-b border-border bg-background px-2 py-1',
+          // Mobile: one scrollable row of priority actions; desktop wraps.
+          'flex-nowrap overflow-x-auto md:flex-wrap md:justify-center md:overflow-visible',
+          'md:rounded-xl md:border md:px-1.5 md:shadow-sm',
+          '[&>*]:shrink-0',
+        )}
+        data-testid="wysiwyg-toolbar"
+      >
+        <ToolbarButton
+          label="Undo (Ctrl+Z)"
+          disabled={disabled}
+          onClick={() => run(undoCommand.key)}
+        >
+          <Undo2 className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Redo (Ctrl+Y)"
+          disabled={disabled}
+          onClick={() => run(redoCommand.key)}
+        >
+          <Redo2 className="size-4" />
+        </ToolbarButton>
 
-      <Divider />
+        <Divider />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={disabled}>
-          <button
-            type="button"
-            aria-label="Block type"
-            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
-            data-testid="block-type-trigger"
-          >
-            {BLOCK_TYPE_LABELS[state.blockType]}
-            <ChevronDown className="size-3.5 opacity-60" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {(['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'quote', 'code'] as BlockType[]).map(
-            (type) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={disabled}>
+            <button
+              type="button"
+              aria-label="Block type"
+              className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+              data-testid="block-type-trigger"
+            >
+              {/* Fixed width: in a centred toolbar a label that resizes with the
+                cursor's block type would shove every other button sideways. */}
+              <span className="w-20 truncate text-left">{BLOCK_TYPE_LABELS[state.blockType]}</span>
+              <ChevronDown className="size-3.5 opacity-60" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {(
+              ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'quote', 'code'] as BlockType[]
+            ).map((type) => (
               <DropdownMenuItem key={type} onSelect={() => setBlockType(type)}>
                 {BLOCK_TYPE_LABELS[type]}
               </DropdownMenuItem>
-            ),
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <Divider />
+        <Divider />
 
-      <ToolbarButton
-        label="Bold (Ctrl+B)"
-        active={state.strong}
-        disabled={disabled}
-        onClick={() => run(toggleStrongCommand.key)}
-      >
-        <Bold className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Italic (Ctrl+I)"
-        active={state.emphasis}
-        disabled={disabled}
-        onClick={() => run(toggleEmphasisCommand.key)}
-      >
-        <Italic className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Strikethrough (Ctrl+Shift+X)"
-        active={state.strikethrough}
-        disabled={disabled}
-        onClick={() => run(toggleStrikethroughCommand.key)}
-      >
-        <Strikethrough className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Inline code (Ctrl+E)"
-        active={state.inlineCode}
-        disabled={disabled}
-        onClick={() => run(toggleInlineCodeCommand.key)}
-      >
-        <Code className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Link (Ctrl+K)"
-        active={state.link}
-        disabled={disabled}
-        onClick={openLinkEditor}
-      >
-        <Link className="size-4" />
-      </ToolbarButton>
+        <ToolbarButton
+          label="Bold (Ctrl+B)"
+          active={state.strong}
+          disabled={disabled}
+          onClick={() => run(toggleStrongCommand.key)}
+        >
+          <Bold className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Italic (Ctrl+I)"
+          active={state.emphasis}
+          disabled={disabled}
+          onClick={() => run(toggleEmphasisCommand.key)}
+        >
+          <Italic className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Strikethrough (Ctrl+Shift+X)"
+          active={state.strikethrough}
+          disabled={disabled}
+          onClick={() => run(toggleStrikethroughCommand.key)}
+        >
+          <Strikethrough className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Inline code (Ctrl+E)"
+          active={state.inlineCode}
+          disabled={disabled}
+          onClick={() => run(toggleInlineCodeCommand.key)}
+        >
+          <Code className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Link (Ctrl+K)"
+          active={state.link}
+          disabled={disabled}
+          onClick={openLinkEditor}
+        >
+          <Link className="size-4" />
+        </ToolbarButton>
 
-      <Divider />
+        <Divider />
 
-      <ToolbarButton
-        label="Bullet list (Ctrl+Shift+8)"
-        active={state.bulletList && !state.taskList}
-        disabled={disabled}
-        onClick={() => run(wrapInBulletListCommand.key)}
-      >
-        <List className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Numbered list (Ctrl+Shift+7)"
-        active={state.orderedList}
-        disabled={disabled}
-        onClick={() => run(wrapInOrderedListCommand.key)}
-      >
-        <ListOrdered className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Task list (Ctrl+Shift+9)"
-        active={state.taskList}
-        disabled={disabled}
-        onClick={() => run(toggleTaskListCommand.key)}
-      >
-        <ListTodo className="size-4" />
-      </ToolbarButton>
+        <ToolbarButton
+          label="Bullet list (Ctrl+Shift+8)"
+          active={state.bulletList && !state.taskList}
+          disabled={disabled}
+          onClick={() => run(wrapInBulletListCommand.key)}
+        >
+          <List className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Numbered list (Ctrl+Shift+7)"
+          active={state.orderedList}
+          disabled={disabled}
+          onClick={() => run(wrapInOrderedListCommand.key)}
+        >
+          <ListOrdered className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Task list (Ctrl+Shift+9)"
+          active={state.taskList}
+          disabled={disabled}
+          onClick={() => run(toggleTaskListCommand.key)}
+        >
+          <ListTodo className="size-4" />
+        </ToolbarButton>
 
-      <Divider />
+        <Divider />
 
-      <ToolbarButton
-        label="Insert table"
-        active={state.inTable}
-        disabled={disabled}
-        onClick={() => run(insertTableCommand.key, { row: 3, col: 3 })}
-      >
-        <Table className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Insert image"
-        disabled={disabled}
-        onClick={() => {
-          const anchor = document.querySelector<HTMLElement>('[data-testid="wysiwyg-toolbar"]');
-          if (anchor) insertImage(anchor);
-        }}
-      >
-        <Image className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Insert inline math"
-        disabled={disabled}
-        onClick={() => run(insertMathInlineCommand.key, '')}
-      >
-        <Sigma className="size-4" />
-      </ToolbarButton>
+        <ToolbarButton
+          label="Insert table"
+          active={state.inTable}
+          disabled={disabled}
+          onClick={() => run(insertTableCommand.key, { row: 3, col: 3 })}
+        >
+          <Table className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Insert image"
+          disabled={disabled}
+          onClick={() => {
+            const anchor = document.querySelector<HTMLElement>('[data-testid="wysiwyg-toolbar"]');
+            if (anchor) insertImage(anchor);
+          }}
+        >
+          <Image className="size-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Insert inline math"
+          disabled={disabled}
+          onClick={() => run(insertMathInlineCommand.key, '')}
+        >
+          <Sigma className="size-4" />
+        </ToolbarButton>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={disabled}>
-          <button
-            type="button"
-            aria-label="More blocks"
-            className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
-            data-testid="toolbar-more"
-          >
-            <MoreHorizontal className="size-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => run(wrapInBlockquoteCommand.key)}>
-            Quote (Ctrl+Shift+B)
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => run(wrapInCalloutCommand.key, 'note')}>
-            Callout
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => run(insertHrCommand.key)}>Divider</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => run(insertMathBlockCommand.key, '')}>
-            Math block
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => run(insertDiagramCommand.key)}>
-            Mermaid diagram
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={disabled}>
+            <button
+              type="button"
+              aria-label="More blocks"
+              className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+              data-testid="toolbar-more"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => run(wrapInBlockquoteCommand.key)}>
+              Quote (Ctrl+Shift+B)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => run(wrapInCalloutCommand.key, 'note')}>
+              Callout
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => run(insertHrCommand.key)}>Divider</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => run(insertMathBlockCommand.key, '')}>
+              Math block
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => run(insertDiagramCommand.key)}>
+              Mermaid diagram
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
