@@ -1,21 +1,5 @@
+import type { EditorView as CmView } from '@codemirror/view';
 import type { Editor } from '@milkdown/kit/core';
-import { commandsCtx, editorViewCtx } from '@milkdown/kit/core';
-import type { CmdKey } from '@milkdown/kit/core';
-import { redoCommand, undoCommand } from '@milkdown/kit/plugin/history';
-import {
-  createCodeBlockCommand,
-  insertHrCommand,
-  insertImageCommand,
-  toggleEmphasisCommand,
-  toggleInlineCodeCommand,
-  toggleStrongCommand,
-  turnIntoTextCommand,
-  wrapInBlockquoteCommand,
-  wrapInBulletListCommand,
-  wrapInHeadingCommand,
-  wrapInOrderedListCommand,
-} from '@milkdown/kit/preset/commonmark';
-import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm';
 import {
   Bold,
   ChevronDown,
@@ -34,7 +18,7 @@ import {
   Undo2,
 } from 'lucide-react';
 
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 
 import {
   DropdownMenu,
@@ -42,19 +26,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { createSourceToolbarCommands } from '@/editors/raw/toolbar-commands';
 import { useRovingToolbar } from '@/lib/useRovingToolbar';
 import { cn } from '@/lib/utils';
 
-import {
-  insertDiagramCommand,
-  insertMathBlockCommand,
-  insertMathInlineCommand,
-  toggleTaskListCommand,
-  wrapInCalloutCommand,
-} from './commands';
 import { openSourcePopover } from './views/source-popover';
 import type { BlockType, WysiwygSelectionState } from './selection-state';
-import { triggerLinkEdit } from './shortcuts';
+import { createRichToolbarCommands } from './toolbar-commands';
 
 const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   paragraph: 'Paragraph',
@@ -70,9 +48,25 @@ const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   other: 'Paragraph',
 };
 
+/** The source pane as an alternative toolbar target (dual mode). */
+interface SourceTarget {
+  /** Live CodeMirror view of the pane (null while mounting). */
+  view: CmView | null;
+  /** That pane's caret-context state, reflected while it is the target. */
+  state: WysiwygSelectionState;
+  /** True when the source pane was the last-focused pane. */
+  active: boolean;
+}
+
 interface ToolbarProps {
   editor: Editor | null;
   state: WysiwygSelectionState;
+  /**
+   * Dual mode only: when `active`, every button drives the CodeMirror pane
+   * as markdown text edits instead of Milkdown commands. Omitted in single
+   * WYSIWYG mode, where the toolbar is Milkdown-only.
+   */
+  source?: SourceTarget;
 }
 
 function ToolbarButton({
@@ -114,38 +108,24 @@ function Divider() {
   return <div className="mx-1 h-5 w-px bg-border" aria-hidden />;
 }
 
-/** Fixed WYSIWYG toolbar (FR-5.2) with selection-state reflection. */
-export function WysiwygToolbar({ editor, state }: ToolbarProps) {
+/**
+ * Fixed formatting toolbar (FR-5.2) with selection-state reflection. In dual
+ * mode it drives whichever pane the cursor was last in: the `source` prop
+ * routes every action to the CodeMirror pane while that pane is the target,
+ * through the shared `ToolbarCommands` adapter pair.
+ */
+export function WysiwygToolbar({ editor, state, source }: ToolbarProps) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   useRovingToolbar(toolbarRef);
 
-  function run<T>(key: CmdKey<T>, payload?: T) {
-    editor?.action((ctx) => {
-      ctx.get(commandsCtx).call(key, payload);
-      ctx.get(editorViewCtx).focus();
-    });
-  }
-
-  const setBlockType = (type: BlockType) => {
-    if (type.startsWith('h')) {
-      run(wrapInHeadingCommand.key, Number(type.slice(1)));
-    } else if (type === 'quote') {
-      run(wrapInBlockquoteCommand.key);
-    } else if (type === 'code') {
-      run(createCodeBlockCommand.key);
-    } else if (type === 'callout') {
-      run(wrapInCalloutCommand.key);
-    } else {
-      run(turnIntoTextCommand.key);
-    }
-  };
-
-  const openLinkEditor = () => {
-    editor?.action((ctx) => {
-      const view = ctx.get(editorViewCtx);
-      triggerLinkEdit(ctx, view.state);
-    });
-  };
+  const sourceView = source?.active ? source.view : null;
+  const commands = useMemo(
+    () =>
+      sourceView ? createSourceToolbarCommands(sourceView) : createRichToolbarCommands(editor),
+    [sourceView, editor],
+  );
+  const shown = sourceView && source ? source.state : state;
+  const disabled = sourceView ? false : editor === null;
 
   const insertImage = (anchor: HTMLElement) => {
     openSourcePopover({
@@ -155,12 +135,10 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
       multiline: false,
       placeholder: 'https://… or relative path',
       onApply: (src) => {
-        if (src.trim()) run(insertImageCommand.key, { src: src.trim() });
+        if (src.trim()) commands.image(src.trim());
       },
     });
   };
-
-  const disabled = editor === null;
 
   return (
     // Desktop: the sparse toolbar would leave a mostly-empty full-width bar,
@@ -181,18 +159,10 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
         )}
         data-testid="wysiwyg-toolbar"
       >
-        <ToolbarButton
-          label="Undo (Ctrl+Z)"
-          disabled={disabled}
-          onClick={() => run(undoCommand.key)}
-        >
+        <ToolbarButton label="Undo (Ctrl+Z)" disabled={disabled} onClick={() => commands.undo()}>
           <Undo2 className="size-4" />
         </ToolbarButton>
-        <ToolbarButton
-          label="Redo (Ctrl+Y)"
-          disabled={disabled}
-          onClick={() => run(redoCommand.key)}
-        >
+        <ToolbarButton label="Redo (Ctrl+Y)" disabled={disabled} onClick={() => commands.redo()}>
           <Redo2 className="size-4" />
         </ToolbarButton>
 
@@ -208,7 +178,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
             >
               {/* Fixed width: in a centred toolbar a label that resizes with the
                 cursor's block type would shove every other button sideways. */}
-              <span className="w-20 truncate text-left">{BLOCK_TYPE_LABELS[state.blockType]}</span>
+              <span className="w-20 truncate text-left">{BLOCK_TYPE_LABELS[shown.blockType]}</span>
               <ChevronDown className="size-3.5 opacity-60" />
             </button>
           </DropdownMenuTrigger>
@@ -216,7 +186,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
             {(
               ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'quote', 'code'] as BlockType[]
             ).map((type) => (
-              <DropdownMenuItem key={type} onSelect={() => setBlockType(type)}>
+              <DropdownMenuItem key={type} onSelect={() => commands.setBlockType(type)}>
                 {BLOCK_TYPE_LABELS[type]}
               </DropdownMenuItem>
             ))}
@@ -227,41 +197,41 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
 
         <ToolbarButton
           label="Bold (Ctrl+B)"
-          active={state.strong}
+          active={shown.strong}
           disabled={disabled}
-          onClick={() => run(toggleStrongCommand.key)}
+          onClick={() => commands.strong()}
         >
           <Bold className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Italic (Ctrl+I)"
-          active={state.emphasis}
+          active={shown.emphasis}
           disabled={disabled}
-          onClick={() => run(toggleEmphasisCommand.key)}
+          onClick={() => commands.emphasis()}
         >
           <Italic className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Strikethrough (Ctrl+Shift+X)"
-          active={state.strikethrough}
+          active={shown.strikethrough}
           disabled={disabled}
-          onClick={() => run(toggleStrikethroughCommand.key)}
+          onClick={() => commands.strikethrough()}
         >
           <Strikethrough className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Inline code (Ctrl+E)"
-          active={state.inlineCode}
+          active={shown.inlineCode}
           disabled={disabled}
-          onClick={() => run(toggleInlineCodeCommand.key)}
+          onClick={() => commands.inlineCode()}
         >
           <Code className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Link (Ctrl+K)"
-          active={state.link}
+          active={shown.link}
           disabled={disabled}
-          onClick={openLinkEditor}
+          onClick={() => commands.link()}
         >
           <Link className="size-4" />
         </ToolbarButton>
@@ -270,25 +240,25 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
 
         <ToolbarButton
           label="Bullet list (Ctrl+Shift+8)"
-          active={state.bulletList && !state.taskList}
+          active={shown.bulletList && !shown.taskList}
           disabled={disabled}
-          onClick={() => run(wrapInBulletListCommand.key)}
+          onClick={() => commands.bulletList()}
         >
           <List className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Numbered list (Ctrl+Shift+7)"
-          active={state.orderedList}
+          active={shown.orderedList}
           disabled={disabled}
-          onClick={() => run(wrapInOrderedListCommand.key)}
+          onClick={() => commands.orderedList()}
         >
           <ListOrdered className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Task list (Ctrl+Shift+9)"
-          active={state.taskList}
+          active={shown.taskList}
           disabled={disabled}
-          onClick={() => run(toggleTaskListCommand.key)}
+          onClick={() => commands.taskList()}
         >
           <ListTodo className="size-4" />
         </ToolbarButton>
@@ -297,9 +267,9 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
 
         <ToolbarButton
           label="Insert table"
-          active={state.inTable}
+          active={shown.inTable}
           disabled={disabled}
-          onClick={() => run(insertTableCommand.key, { row: 3, col: 3 })}
+          onClick={() => commands.table()}
         >
           <Table className="size-4" />
         </ToolbarButton>
@@ -316,7 +286,7 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
         <ToolbarButton
           label="Insert inline math"
           disabled={disabled}
-          onClick={() => run(insertMathInlineCommand.key, '')}
+          onClick={() => commands.mathInline()}
         >
           <Sigma className="size-4" />
         </ToolbarButton>
@@ -333,19 +303,13 @@ export function WysiwygToolbar({ editor, state }: ToolbarProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => run(wrapInBlockquoteCommand.key)}>
+            <DropdownMenuItem onSelect={() => commands.quote()}>
               Quote (Ctrl+Shift+B)
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => run(wrapInCalloutCommand.key, 'note')}>
-              Callout
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => run(insertHrCommand.key)}>Divider</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => run(insertMathBlockCommand.key, '')}>
-              Math block
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => run(insertDiagramCommand.key)}>
-              Mermaid diagram
-            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => commands.callout()}>Callout</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => commands.divider()}>Divider</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => commands.mathBlock()}>Math block</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => commands.diagram()}>Mermaid diagram</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

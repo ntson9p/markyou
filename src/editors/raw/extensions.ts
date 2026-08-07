@@ -24,7 +24,9 @@ import {
 
 import { formatCommands } from '@/editors/raw/format-commands';
 import { imagePasteExtension } from '@/editors/raw/image-paste';
+import { computeRawSelectionState } from '@/editors/raw/toolbar-state';
 import { rawEditorTheme, rawSyntaxHighlighting } from '@/editors/raw/theme';
+import type { WysiwygSelectionState } from '@/editors/wysiwyg/selection-state';
 
 /** Transactions carrying this annotation come from the store — never re-emitted (loop guard). */
 export const syncAnnotation = Annotation.define<boolean>();
@@ -56,6 +58,8 @@ export interface RawExtensionOptions {
   onCursor?: (line: number, col: number) => void;
   /** Called on selection change with the selected plain text ('' when collapsed). */
   onSelectionText?: (text: string) => void;
+  /** Toolbar reflection (dual mode): caret-context state. Unset ⇒ never computed. */
+  onSelectionState?: (state: WysiwygSelectionState) => void;
 }
 
 export function buildRawExtensions(options: RawExtensionOptions): Extension[] {
@@ -104,6 +108,7 @@ export function buildRawExtensions(options: RawExtensionOptions): Extension[] {
           options.onCursor(line.number, main.head - line.from + 1);
         }
         options.onSelectionText?.(update.state.sliceDoc(main.from, main.to));
+        options.onSelectionState?.(computeRawSelectionState(update.state));
       }
     }),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown source editor' }),

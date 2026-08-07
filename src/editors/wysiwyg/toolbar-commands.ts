@@ -1,0 +1,81 @@
+import type { CmdKey, Editor } from '@milkdown/kit/core';
+import { commandsCtx, editorViewCtx } from '@milkdown/kit/core';
+import { redoCommand, undoCommand } from '@milkdown/kit/plugin/history';
+import {
+  createCodeBlockCommand,
+  insertHrCommand,
+  insertImageCommand,
+  toggleEmphasisCommand,
+  toggleInlineCodeCommand,
+  toggleStrongCommand,
+  turnIntoTextCommand,
+  wrapInBlockquoteCommand,
+  wrapInBulletListCommand,
+  wrapInHeadingCommand,
+  wrapInOrderedListCommand,
+} from '@milkdown/kit/preset/commonmark';
+import { insertTableCommand, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm';
+
+import type { ToolbarCommands } from '@/editors/toolbar-commands';
+
+import {
+  insertDiagramCommand,
+  insertMathBlockCommand,
+  insertMathInlineCommand,
+  toggleTaskListCommand,
+  wrapInCalloutCommand,
+} from './commands';
+import type { BlockType } from './selection-state';
+import { triggerLinkEdit } from './shortcuts';
+
+/**
+ * Toolbar adapter for the WYSIWYG (Milkdown) pane. Every action runs the
+ * command and returns focus to the editor, so the toolbar never strands the
+ * caret. A null editor (still mounting) makes every action a no-op.
+ */
+export function createRichToolbarCommands(editor: Editor | null): ToolbarCommands {
+  function run<T>(key: CmdKey<T>, payload?: T) {
+    editor?.action((ctx) => {
+      ctx.get(commandsCtx).call(key, payload);
+      ctx.get(editorViewCtx).focus();
+    });
+  }
+
+  return {
+    undo: () => run(undoCommand.key),
+    redo: () => run(redoCommand.key),
+    setBlockType: (type: BlockType) => {
+      if (type.startsWith('h')) {
+        run(wrapInHeadingCommand.key, Number(type.slice(1)));
+      } else if (type === 'quote') {
+        run(wrapInBlockquoteCommand.key);
+      } else if (type === 'code') {
+        run(createCodeBlockCommand.key);
+      } else if (type === 'callout') {
+        run(wrapInCalloutCommand.key);
+      } else {
+        run(turnIntoTextCommand.key);
+      }
+    },
+    strong: () => run(toggleStrongCommand.key),
+    emphasis: () => run(toggleEmphasisCommand.key),
+    strikethrough: () => run(toggleStrikethroughCommand.key),
+    inlineCode: () => run(toggleInlineCodeCommand.key),
+    link: () =>
+      editor?.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        triggerLinkEdit(ctx, view.state);
+      }),
+    bulletList: () => run(wrapInBulletListCommand.key),
+    orderedList: () => run(wrapInOrderedListCommand.key),
+    taskList: () => run(toggleTaskListCommand.key),
+    table: () => run(insertTableCommand.key, { row: 3, col: 3 }),
+    image: (src: string) => run(insertImageCommand.key, { src }),
+    mathInline: () => run(insertMathInlineCommand.key, ''),
+    quote: () => run(wrapInBlockquoteCommand.key),
+    callout: () => run(wrapInCalloutCommand.key, 'note'),
+    divider: () => run(insertHrCommand.key),
+    mathBlock: () => run(insertMathBlockCommand.key, ''),
+    diagram: () => run(insertDiagramCommand.key),
+  };
+}

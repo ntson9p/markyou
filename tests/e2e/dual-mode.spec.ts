@@ -7,6 +7,8 @@ import { getFakeDisk, pinMode, seedFakeFile, stubFsa } from './helpers';
 
 const raw = (page: Page) => page.locator('.cm-content');
 const wys = (page: Page) => page.locator('.ProseMirror');
+// Scoped: the bubble menu duplicates button names when a selection is active.
+const toolbar = (page: Page) => page.getByTestId('wysiwyg-toolbar');
 
 async function openDual(page: Page, name: string, content: string) {
   await stubFsa(page);
@@ -129,5 +131,81 @@ test.describe('dual mode & sync (FR-6)', () => {
     await expect(page.getByTestId('status-save')).toContainText('Saved');
     const disk = await getFakeDisk(page);
     expect(disk['weird.md']).toContain('still editable');
+  });
+});
+
+test.describe('dual-mode toolbar drives the last-focused pane', () => {
+  test('formats the source pane after it was focused', async ({ page }) => {
+    await openDual(page, 'dual.md', 'bold me\n');
+    await raw(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.press('Shift+End');
+    await toolbar(page).getByRole('button', { name: 'Bold (Ctrl+B)' }).click();
+    await expect(raw(page)).toContainText('**bold me**');
+    await expect(wys(page).locator('strong')).toHaveText('bold me');
+  });
+
+  test('the block-type menu retypes the source line', async ({ page }) => {
+    await openDual(page, 'dual.md', 'plain line\n');
+    await raw(page).click();
+    await page.keyboard.press('ControlOrMeta+Home'); // off the trailing empty line
+    await page.getByTestId('block-type-trigger').click();
+    await page.getByRole('menuitem', { name: 'Heading 2' }).click();
+    await expect(raw(page)).toContainText('## plain line');
+    await expect(wys(page).locator('h2')).toHaveText('plain line');
+  });
+
+  test('reflects the source caret context in the buttons', async ({ page }) => {
+    // No trailing newline: Ctrl+End must land inside the heading text.
+    await openDual(page, 'dual.md', '**bold** intro\n\n## Head');
+    const boldButton = toolbar(page).getByRole('button', { name: 'Bold (Ctrl+B)' });
+    await raw(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
+    await expect(boldButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('block-type-trigger')).toContainText('Paragraph');
+
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect(boldButton).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('block-type-trigger')).toContainText('Heading 2');
+  });
+
+  test('switches back to the rich pane when it regains focus', async ({ page }) => {
+    await openDual(page, 'dual.md', 'source line\n\nrich text here\n');
+    await raw(page).click(); // target: source…
+    // …then rich again; triple-click selects the paragraph in one gesture.
+    await wys(page).locator('p', { hasText: 'rich text here' }).click({ clickCount: 3 });
+    await toolbar(page).getByRole('button', { name: 'Bold (Ctrl+B)' }).click();
+    await expect(wys(page).locator('strong')).toHaveText('rich text here');
+    await expect(raw(page)).toContainText('**rich text here**');
+    // The source pane's own first line was left alone.
+    await expect(raw(page)).not.toContainText('**source line**');
+  });
+
+  test('insert-family buttons write markdown into the source pane', async ({ page }) => {
+    await openDual(page, 'dual.md', 'intro\n');
+    await raw(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await toolbar(page).getByRole('button', { name: 'Insert table' }).click();
+    await expect(raw(page)).toContainText('| --- | --- | --- |');
+    // Milkdown's table nodeview keeps a hidden helper <table>; match by role.
+    await expect(wys(page).getByRole('table')).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.getByTestId('toolbar-more').click();
+    await page.getByRole('menuitem', { name: 'Mermaid diagram' }).click();
+    await expect(raw(page)).toContainText('```mermaid');
+  });
+
+  test('undo routes to the source pane while it is the target', async ({ page }) => {
+    await openDual(page, 'dual.md', 'undo me\n');
+    await raw(page).click();
+    await page.keyboard.press('ControlOrMeta+Home');
+    await page.keyboard.press('Shift+End');
+    await toolbar(page).getByRole('button', { name: 'Bold (Ctrl+B)' }).click();
+    await expect(raw(page)).toContainText('**undo me**');
+    await toolbar(page).getByRole('button', { name: 'Undo (Ctrl+Z)' }).click();
+    await expect(raw(page)).not.toContainText('**undo me**');
+    await expect(raw(page)).toContainText('undo me');
   });
 });

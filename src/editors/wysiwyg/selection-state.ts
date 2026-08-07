@@ -22,6 +22,11 @@ export interface WysiwygSelectionState {
   inTable: boolean;
 }
 
+/** Shallow equality over the flat selection-state record. */
+export function selectionStatesEqual(a: WysiwygSelectionState, b: WysiwygSelectionState): boolean {
+  return (Object.keys(a) as (keyof WysiwygSelectionState)[]).every((key) => a[key] === b[key]);
+}
+
 export const INITIAL_SELECTION_STATE: WysiwygSelectionState = {
   strong: false,
   emphasis: false,

@@ -8,6 +8,7 @@ import {
   buildRawExtensions,
   lineNumbersCompartment,
   syncAnnotation,
+  type RawExtensionOptions,
 } from '@/editors/raw/extensions';
 import { useSettingsStore } from '@/features/settings/store';
 import { useEditorsStore } from '@/app/store/editors';
@@ -17,6 +18,11 @@ interface RawEditorProps {
   /** Exposes the live EditorView (scroll sync, adapters). */
   onViewReady?: (view: EditorView | null) => void;
   autoFocus?: boolean;
+  /**
+   * Toolbar reflection (dual mode): caret-context selection state. Captured at
+   * mount like `onViewReady` — pass a stable callback.
+   */
+  onSelectionState?: RawExtensionOptions['onSelectionState'];
 }
 
 /**
@@ -24,7 +30,7 @@ interface RawEditorProps {
  * included); the store re-splits. Byte-faithful: nothing is ever reformatted
  * (D13) — external updates apply as minimal diffs.
  */
-export function RawEditor({ onViewReady, autoFocus = true }: RawEditorProps) {
+export function RawEditor({ onViewReady, autoFocus = true, onSelectionState }: RawEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const docId = useDocStore((s) => s.docId);
@@ -41,6 +47,7 @@ export function RawEditor({ onViewReady, autoFocus = true }: RawEditorProps) {
         onUserChange: (text) => useDocStore.getState().setFullText(text, 'raw'),
         onCursor: (line, col) => useUiStore.getState().setCursor({ line, col }),
         onSelectionText: (text) => useEditorsStore.getState().setSelectionText(text),
+        onSelectionState,
       }),
     });
     const view = new EditorView({ state, parent: containerRef.current });

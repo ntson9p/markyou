@@ -8,6 +8,7 @@ import { useEditorsStore } from '@/app/store/editors';
 import {
   computeSelectionState,
   INITIAL_SELECTION_STATE,
+  selectionStatesEqual,
   type WysiwygSelectionState,
 } from './selection-state';
 
@@ -32,10 +33,7 @@ export function useWysiwygRegistration() {
   const onStateChange = useCallback((state: EditorState) => {
     setSelectionState((prev) => {
       const next = computeSelectionState(state);
-      for (const key of Object.keys(next) as (keyof WysiwygSelectionState)[]) {
-        if (next[key] !== prev[key]) return next;
-      }
-      return prev;
+      return selectionStatesEqual(prev, next) ? prev : next;
     });
     const { from, to, empty } = state.selection;
     useEditorsStore
