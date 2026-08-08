@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { getFullText, useDocStore } from '@/core/document/store';
+import { applyEol, detectEol, getFullText, normalizeEol, useDocStore } from '@/core/document/store';
 
 describe('DocumentStore', () => {
   beforeEach(() => {
@@ -86,5 +86,47 @@ describe('DocumentStore', () => {
     useDocStore.getState().setFullText('external update', 'system');
     expect(useDocStore.getState().dirty).toBe(false);
     expect(useDocStore.getState().version).toBe(1);
+  });
+});
+
+describe('EOL policy (LF-canonical store, flavor preserved for saves)', () => {
+  beforeEach(() => {
+    useDocStore.getState().closeDocument();
+  });
+
+  it('openDocument normalizes CRLF and records the flavor', () => {
+    useDocStore.getState().openDocument({ text: '# T\r\n\r\nalpha\r\n', file: null });
+    const s = useDocStore.getState();
+    expect(s.body).toBe('# T\n\nalpha\n');
+    expect(s.savedText).toBe('# T\n\nalpha\n');
+    expect(s.eol).toBe('crlf');
+  });
+
+  it('an LF file keeps the lf flavor', () => {
+    useDocStore.getState().openDocument({ text: '# T\nalpha\n', file: null });
+    expect(useDocStore.getState().eol).toBe('lf');
+  });
+
+  it('a recovery savedText baseline is normalized too', () => {
+    useDocStore.getState().openDocument({
+      text: 'draft text\n',
+      file: null,
+      dirty: true,
+      savedText: 'disk\r\ntext\r\n',
+    });
+    expect(useDocStore.getState().savedText).toBe('disk\ntext\n');
+  });
+
+  it('the CRLF file content round-trips through applyEol', () => {
+    const disk = '# T\r\n\r\nalpha\r\n';
+    expect(applyEol(normalizeEol(disk), detectEol(disk))).toBe(disk);
+  });
+
+  it('setFullText and restoreText normalize stray CRLF input', () => {
+    useDocStore.getState().newDocument();
+    useDocStore.getState().setFullText('a\r\nb', 'raw');
+    expect(useDocStore.getState().body).toBe('a\nb');
+    useDocStore.getState().restoreText('c\r\nd');
+    expect(useDocStore.getState().body).toBe('c\nd');
   });
 });

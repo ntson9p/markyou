@@ -43,4 +43,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    // Discovered only via the lazily-loaded Review Changes overlay. Without
+    // this, the dev server re-optimizes on first open, serving a second copy
+    // of @codemirror/state whose instanceof checks reject the first one's
+    // extensions ("Unrecognized extension value in extension set").
+    include: ['@codemirror/merge'],
+  },
 });

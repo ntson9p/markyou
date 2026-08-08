@@ -11,6 +11,31 @@ import {
 /** Author of a document version (plan §2.1). 'diff' is the Review Changes editor. */
 export type Origin = 'raw' | 'wysiwyg' | 'meta' | 'system' | 'diff';
 
+/** Line-ending flavor of the underlying file. */
+export type Eol = 'lf' | 'crlf';
+
+/**
+ * The store's text is LF-canonical. CodeMirror normalizes line breaks the
+ * moment a document is created, and remark serializes with \n — so a CRLF
+ * file's text inevitably becomes LF after the first edit anyway. Normalizing
+ * once at the store boundary makes that explicit and keeps every comparison
+ * against `savedText` truthful (Review Changes, recovery diff, dirty checks).
+ * The file's original flavor is kept in `eol` and re-applied on save, so a
+ * CRLF file stays CRLF on disk (D13 spirit: don't rewrite what wasn't edited).
+ */
+export function normalizeEol(text: string): string {
+  return text.includes('\r') ? text.replace(/\r\n?/g, '\n') : text;
+}
+
+export function detectEol(text: string): Eol {
+  return text.includes('\r\n') ? 'crlf' : 'lf';
+}
+
+/** Re-apply the file's EOL flavor for disk writes (input must be LF-canonical). */
+export function applyEol(text: string, eol: Eol): string {
+  return eol === 'crlf' ? text.replace(/\n/g, '\r\n') : text;
+}
+
 /** How the document is bound to a real file. */
 export interface FileBinding {
   /** 'fsa' — File System Access handle (Tier 1); 'memory' — no in-place save (Tier 2/3). */
@@ -36,8 +61,13 @@ export interface DocState {
   dirty: boolean;
   file: FileBinding | null;
   lastSavedAt: number | null;
-  /** Full text at the last save/open — the base for recovery diffs. Null for never-saved docs. */
+  /**
+   * Full text at the last save/open — the base for recovery and Review Changes
+   * diffs. Null for never-saved docs. LF-canonical, like all store text.
+   */
   savedText: string | null;
+  /** The file's line-ending flavor, re-applied on save. */
+  eol: Eol;
 
   // Actions
   newDocument: () => void;
@@ -82,6 +112,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
   file: null,
   lastSavedAt: null,
   savedText: null,
+  eol: 'lf',
 
   newDocument: () =>
     set({
@@ -95,10 +126,14 @@ export const useDocStore = create<DocState>()((set, get) => ({
       file: null,
       lastSavedAt: null,
       savedText: null,
+      eol: 'lf',
     }),
 
   openDocument: ({ text, file, dirty = false, docId, savedText }) => {
-    const { frontmatter, body } = splitAndParse(text);
+    // LF-canonical store; the flavor is remembered and re-applied on save.
+    const eol = detectEol(text);
+    const normalized = normalizeEol(text);
+    const { frontmatter, body } = splitAndParse(normalized);
     set({
       status: 'open',
       docId: docId ?? newDocId(),
@@ -109,7 +144,15 @@ export const useDocStore = create<DocState>()((set, get) => ({
       dirty,
       file,
       lastSavedAt: null,
-      savedText: savedText !== undefined ? savedText : dirty ? null : text,
+      savedText:
+        savedText !== undefined
+          ? savedText === null
+            ? null
+            : normalizeEol(savedText)
+          : dirty
+            ? null
+            : normalized,
+      eol,
     });
   },
 
@@ -125,10 +168,12 @@ export const useDocStore = create<DocState>()((set, get) => ({
       file: null,
       lastSavedAt: null,
       savedText: null,
+      eol: 'lf',
     }),
 
   setFullText: (text, origin) => {
     const state = get();
+    text = normalizeEol(text); // editors emit LF, but keep the invariant airtight
     if (text === getFullText(state)) return; // content-equality short-circuit
     const { frontmatter, body } = splitAndParse(text);
     set({
@@ -142,6 +187,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
 
   setBody: (body, origin) => {
     const state = get();
+    body = normalizeEol(body);
     if (body === state.body) return;
     set({
       body,
@@ -153,7 +199,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
 
   setFrontmatterBlock: (block, origin = 'meta') => {
     const state = get();
-    const normalized = block === '' ? null : block;
+    const normalized = block === '' || block === null ? null : normalizeEol(block);
     if (normalized === state.frontmatter.rawBlock) return;
     const frontmatter = normalized === null ? EMPTY_FRONTMATTER : parseFrontmatterBlock(normalized);
     set({
@@ -166,6 +212,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
 
   restoreText: (text) => {
     const state = get();
+    text = normalizeEol(text); // pre-fix snapshots/drafts may carry CRLF
     if (text === getFullText(state)) return;
     const { frontmatter, body } = splitAndParse(text);
     // origin 'system' so every editor applies it (none authored it); dirty so

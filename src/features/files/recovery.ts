@@ -1,5 +1,5 @@
 import { db, type DraftRecord } from '@/core/storage/db';
-import { useDocStore } from '@/core/document/store';
+import { normalizeEol, useDocStore } from '@/core/document/store';
 import type { FileBinding } from '@/core/document/store';
 
 /**
@@ -21,7 +21,8 @@ export async function findRecoveryCandidate(): Promise<DraftRecord | null> {
       if ((await draft.handle.queryPermission({ mode: 'read' })) === 'granted') {
         const file = await draft.handle.getFile();
         const fileText = await file.text();
-        if (fileText === draft.text) {
+        // Drafts are LF-canonical; the file may be CRLF — compare like for like.
+        if (normalizeEol(fileText) === normalizeEol(draft.text)) {
           await db.drafts.delete(draft.docId);
           return null;
         }

@@ -1,4 +1,4 @@
-import { getFullText, useDocStore, type FileBinding } from '@/core/document/store';
+import { applyEol, getFullText, useDocStore, type FileBinding } from '@/core/document/store';
 import { getStorageProvider } from '@/core/storage/provider';
 import { StorageError } from '@/core/storage/types';
 import { FsaStorageProvider } from '@/core/storage/fsa';
@@ -65,7 +65,8 @@ export async function saveDocument(): Promise<void> {
   const store = useDocStore.getState();
   if (store.status !== 'open') return;
   const provider = getStorageProvider();
-  const text = getFullText(store);
+  // The store is LF-canonical; write the file back in its own EOL flavor.
+  const text = applyEol(getFullText(store), store.eol);
   try {
     const binding = await provider.save(store.file, text, suggestFileName(store));
     if (!binding) return; // user cancelled the picker
@@ -86,7 +87,7 @@ export async function saveDocumentAs(): Promise<void> {
   const store = useDocStore.getState();
   if (store.status !== 'open') return;
   const provider = getStorageProvider();
-  const text = getFullText(store);
+  const text = applyEol(getFullText(store), store.eol);
   try {
     const binding = await provider.saveAs(text, suggestFileName(store));
     if (!binding) return;

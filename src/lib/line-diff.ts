@@ -7,6 +7,12 @@ export interface DiffLine {
 const MAX_DP_CELLS = 4_000_000;
 
 /**
+ * Split on every line-break flavor, like CodeMirror does — a CRLF file diffed
+ * against LF-canonical store text must not report every line as changed.
+ */
+const LINE_BREAK = /\r\n?|\n/;
+
+/**
  * Simple LCS-based line diff for the recovery preview (FR-1.7) —
  * good enough for a readable preview; the full merge view (M6) uses
  * @codemirror/merge.
@@ -15,10 +21,10 @@ export function diffLines(oldText: string, newText: string): DiffLine[] {
   if (oldText === newText) {
     return oldText === ''
       ? []
-      : oldText.split('\n').map((text) => ({ type: 'same' as const, text }));
+      : oldText.split(LINE_BREAK).map((text) => ({ type: 'same' as const, text }));
   }
-  const a = oldText.split('\n');
-  const b = newText.split('\n');
+  const a = oldText.split(LINE_BREAK);
+  const b = newText.split(LINE_BREAK);
 
   // Trim common prefix/suffix.
   let start = 0;

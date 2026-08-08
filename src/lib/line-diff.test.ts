@@ -46,6 +46,17 @@ describe('diffLines', () => {
     const d = diffLines(a, b);
     expect(d.length).toBeGreaterThan(0);
   });
+
+  it('is line-break-flavor insensitive: CRLF vs LF differs only where content differs', () => {
+    const d = diffLines('a\r\nb\r\nc\r\n', 'a\nB\nc\n');
+    expect(d).toEqual([
+      { type: 'same', text: 'a' },
+      { type: 'del', text: 'b' },
+      { type: 'add', text: 'B' },
+      { type: 'same', text: 'c' },
+      { type: 'same', text: '' },
+    ]);
+  });
 });
 
 describe('diffHunks', () => {
