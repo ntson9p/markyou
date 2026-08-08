@@ -77,12 +77,10 @@ describe('createSourceToolbarCommands (dual-mode toolbar → source pane)', () =
     expect(view.state.doc.toString()).toBe('> [!note]\n> line a\n> line b');
   });
 
-  it('inserts a 3×3 table with the caret in the first cell', () => {
+  it('inserts a 3×3 table (compact style, FR-13.2 default) with the caret in the first cell', () => {
     const view = makeView('', 0);
     createSourceToolbarCommands(view).table();
-    expect(view.state.doc.toString()).toBe(
-      '|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |',
-    );
+    expect(view.state.doc.toString()).toBe('| | | |\n| - | - | - |\n| | | |\n| | | |');
     expect(view.state.selection.main.head).toBe(2);
   });
 
@@ -91,7 +89,7 @@ describe('createSourceToolbarCommands (dual-mode toolbar → source pane)', () =
     const view = makeView(doc, 9); // caret on the empty line
     createSourceToolbarCommands(view).table();
     expect(view.state.doc.toString()).toBe(
-      'para one\n\n|  |  |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n\npara two',
+      'para one\n\n| | | |\n| - | - | - |\n| | | |\n| | | |\n\npara two',
     );
   });
 

@@ -187,7 +187,8 @@ test.describe('dual-mode toolbar drives the last-focused pane', () => {
     await raw(page).click();
     await page.keyboard.press('ControlOrMeta+End');
     await toolbar(page).getByRole('button', { name: 'Insert table' }).click();
-    await expect(raw(page)).toContainText('| --- | --- | --- |');
+    // Compact table style (FR-13.2 default) — matches the WYSIWYG serializer.
+    await expect(raw(page)).toContainText('| - | - | - |');
     // Milkdown's table nodeview keeps a hidden helper <table>; match by role.
     await expect(wys(page).getByRole('table')).toBeVisible();
 

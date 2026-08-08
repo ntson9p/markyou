@@ -24,6 +24,8 @@ function SettingsDialog() {
   const close = () => useUiStore.getState().setActivePanel(null);
   const diagramScroll = useSettingsStore((s) => s.diagramScroll);
   const setDiagramScroll = useSettingsStore((s) => s.setDiagramScroll);
+  const tableAlign = useSettingsStore((s) => s.markdownStyle.tableAlign);
+  const setMarkdownStyle = useSettingsStore((s) => s.setMarkdownStyle);
 
   return (
     <Modal
@@ -39,6 +41,21 @@ function SettingsDialog() {
       }
     >
       <div className="space-y-6" data-testid="settings-panel">
+        <Section title="Markdown style">
+          <SettingRow
+            label="Align table columns"
+            hint="Pad table cells so the pipes line up in the markdown source. Off, tables keep their compact form and rich-text edits leave untouched table rows exactly as you wrote them; on, every table is re-padded whenever the document is normalized."
+          >
+            {(labelId) => (
+              <Switch
+                checked={tableAlign}
+                onCheckedChange={(on) => setMarkdownStyle({ tableAlign: on })}
+                aria-labelledby={labelId}
+                data-testid="setting-table-align"
+              />
+            )}
+          </SettingRow>
+        </Section>
         <Section title="Diagrams">
           <SettingRow
             label="Scroll wide diagrams"

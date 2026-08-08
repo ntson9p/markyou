@@ -88,10 +88,29 @@ test.describe('review changes diff (unsaved vs. last saved)', () => {
   test('a large serializer rewrite still produces a precise diff, not one whole-doc chunk', async ({
     page,
   }) => {
-    // A compact table: a WYSIWYG edit re-serializes the body (D13) and re-pads
-    // every row — thousands of changed characters. Past the merge library's
-    // default scan limit that used to collapse into ONE imprecise chunk with
-    // every line marked changed.
+    // With table alignment ON (pinned below), a WYSIWYG edit re-serializes
+    // the body (D13) and re-pads every table row — thousands of changed
+    // characters. Past the merge library's default scan limit that used to
+    // collapse into ONE imprecise chunk with every line marked changed.
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'markyou.settings',
+        JSON.stringify({
+          state: {
+            markdownStyle: {
+              bullet: '-',
+              emphasis: '*',
+              strong: '*',
+              fence: '`',
+              listItemIndent: 'one',
+              rule: '-',
+              tableAlign: true,
+            },
+          },
+          version: 0,
+        }),
+      );
+    });
     const doc = [
       '# Table doc',
       '',
@@ -128,5 +147,43 @@ test.describe('review changes diff (unsaved vs. last saved)', () => {
     await expect(
       overlay.locator('.cm-merge-a .cm-changedLine', { hasText: 'Table doc' }),
     ).toHaveCount(0);
+  });
+
+  test('compact tables are left byte-identical by WYSIWYG edits (default table style)', async ({
+    page,
+  }) => {
+    // FR-13.2 table style, default OFF: a document whose table is already in
+    // canonical compact form must show exactly ONE change after a WYSIWYG
+    // edit — the edit itself. No table row may be touched.
+    const doc = [
+      '# Doc',
+      '',
+      '| term | meaning |',
+      '| - | - |',
+      '| slot | one bookable time cell |',
+      '| span | start plus N |',
+      '',
+      'Outro paragraph.',
+      '',
+    ].join('\n');
+    await stubFsa(page);
+    await seedFakeFile(page, 'compact.md', doc);
+    await pinMode(page, 'wysiwyg');
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    const editor = page.locator('.milkdown [contenteditable="true"]').first();
+    await editor.waitFor();
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.type(' tail');
+    await page.waitForTimeout(1000); // let the debounced WYSIWYG push land
+
+    await page.keyboard.press('ControlOrMeta+Shift+d');
+    const overlay = page.getByTestId('diff-overlay');
+    await expect(overlay).toBeVisible({ timeout: 15_000 });
+
+    // One chunk total: the edited paragraph. The table contributed nothing.
+    await expect(overlay.getByTestId('diff-chunk-pos')).toContainText('/ 1');
+    await expect(overlay.locator('.cm-changedLine', { hasText: 'slot' })).toHaveCount(0);
   });
 });

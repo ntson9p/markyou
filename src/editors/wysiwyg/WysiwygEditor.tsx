@@ -46,6 +46,9 @@ export interface WysiwygEditorProps {
 export function WysiwygEditor({ onEditorReady, onStateChange, onParseError }: WysiwygEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const callbacksRef = useRef({ onEditorReady, onStateChange, onParseError });
+  // Serialization style (FR-13.2) is baked into the editor at creation;
+  // recreate when it changes so a Settings toggle applies immediately.
+  const markdownStyle = useSettingsStore((s) => s.markdownStyle);
 
   useEffect(() => {
     callbacksRef.current = { onEditorReady, onStateChange, onParseError };
@@ -194,8 +197,9 @@ export function WysiwygEditor({ onEditorReady, onStateChange, onParseError }: Wy
       if (editor) void editor.destroy();
       editor = null;
     };
-    // Mounted once per document instance (parent keys this component by docId).
-  }, []);
+    // Mounted once per document instance (parent keys this component by
+    // docId) — and remounted when the serialization style prefs change.
+  }, [markdownStyle]);
 
   return (
     <div

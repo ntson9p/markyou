@@ -20,7 +20,7 @@ import { indent } from '@milkdown/kit/plugin/indent';
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener';
 import * as commonmarkExports from '@milkdown/kit/preset/commonmark';
 import { commonmark, remarkInlineLinkPlugin } from '@milkdown/kit/preset/commonmark';
-import { gfm } from '@milkdown/kit/preset/gfm';
+import { gfm, remarkGFMPlugin } from '@milkdown/kit/preset/gfm';
 import type { Node as ProseNode } from '@milkdown/kit/prose/model';
 import { Plugin } from '@milkdown/kit/prose/state';
 import type { EditorState } from '@milkdown/kit/prose/state';
@@ -28,6 +28,7 @@ import { $prose } from '@milkdown/kit/utils';
 
 import {
   DEFAULT_STYLE_PREFS,
+  toGfmOptions,
   toStringifyOptions,
   type MarkdownStylePrefs,
 } from '@/core/markdown/style';
@@ -163,6 +164,9 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
         ctx.set(rootCtx, options.root);
         ctx.set(defaultValueCtx, options.defaultValue ?? '');
         ctx.set(remarkStringifyOptionsCtx, wysiwygStringifyOptions(prefs));
+        // Table style (FR-13.2): compact by default — aligning pads every row
+        // of every table on any edit; the pref opts back into alignment.
+        ctx.set(remarkGFMPlugin.options.key, toGfmOptions(prefs));
         // Label the contenteditable surface for screen readers (§a11y; axe
         // aria-input-field-name). Merge so Milkdown's own attributes survive.
         ctx.update(editorViewOptionsCtx, (prev) => {

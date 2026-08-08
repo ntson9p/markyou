@@ -3,6 +3,7 @@ import type { Command, EditorView } from '@codemirror/view';
 
 import type { ToolbarCommands } from '@/editors/toolbar-commands';
 import type { BlockType } from '@/editors/wysiwyg/selection-state';
+import { useSettingsStore } from '@/features/settings/store';
 
 import { formatCommands, setHeading, toggleInlineMark, toggleLinePrefix } from './format-commands';
 
@@ -16,8 +17,18 @@ import { formatCommands, setHeading, toggleInlineMark, toggleLinePrefix } from '
 
 /** Starter contents matching the WYSIWYG insert commands' defaults. */
 const DIAGRAM_STARTER = 'graph TD\n  A[Start] --> B[End]';
-const TABLE_STARTER = ['|  |  |  |', '| --- | --- | --- |', '|  |  |  |', '|  |  |  |'].join('\n');
 const MERMAID_OPEN = '```mermaid\n';
+
+/**
+ * Empty 3×3 table exactly as the WYSIWYG serializer would emit it under the
+ * current table-style pref (FR-13.2), so a table inserted from either pane
+ * round-trips byte-identically.
+ */
+function tableStarter(): string {
+  const aligned = useSettingsStore.getState().markdownStyle.tableAlign;
+  const row = aligned ? '|   |   |   |' : '| | | |';
+  return [row, '| - | - | - |', row, row].join('\n');
+}
 
 interface InsertBlockOptions {
   /** Range to replace; defaults to the main selection. */
@@ -67,7 +78,7 @@ function insertBlock(view: EditorView, block: string, options: InsertBlockOption
   return true;
 }
 
-const insertTable: Command = (view) => insertBlock(view, TABLE_STARTER, { inner: { from: 2 } });
+const insertTable: Command = (view) => insertBlock(view, tableStarter(), { inner: { from: 2 } });
 
 /** `---` with the caret parked on the line below, like the WYSIWYG insert. */
 const insertHorizontalRule: Command = (view) => insertBlock(view, '---\n', { inner: { from: 4 } });

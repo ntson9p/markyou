@@ -54,6 +54,19 @@ export const useSettingsStore = create<SettingsState>()(
       setDiagramScroll: (diagramScroll) => set({ diagramScroll }),
       resetToDefaults: () => set({ ...DEFAULTS }),
     }),
-    { name: 'markyou.settings' },
+    {
+      name: 'markyou.settings',
+      // Deep-merge markdownStyle so settings persisted before a new style
+      // pref existed (e.g. tableAlign) pick up its default instead of
+      // rehydrating `undefined` into a controlled input.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>;
+        return {
+          ...current,
+          ...p,
+          markdownStyle: { ...current.markdownStyle, ...(p.markdownStyle ?? {}) },
+        };
+      },
+    },
   ),
 );
