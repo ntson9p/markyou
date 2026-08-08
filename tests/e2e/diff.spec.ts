@@ -84,4 +84,49 @@ test.describe('review changes diff (unsaved vs. last saved)', () => {
     await expect(cm).not.toContainText('EDITED');
     await expect(cm).not.toContainText('X');
   });
+
+  test('a large serializer rewrite still produces a precise diff, not one whole-doc chunk', async ({
+    page,
+  }) => {
+    // A compact table: a WYSIWYG edit re-serializes the body (D13) and re-pads
+    // every row — thousands of changed characters. Past the merge library's
+    // default scan limit that used to collapse into ONE imprecise chunk with
+    // every line marked changed.
+    const doc = [
+      '# Table doc',
+      '',
+      'Intro paragraph text.',
+      '',
+      '| term | meaning |',
+      '|---|---|',
+      '| a-very-long-term-name-for-width | the meaning of the first term in this padded table |',
+      ...Array.from({ length: 18 }, (_, i) => `| t${i} | m${i} |`),
+      '',
+      'Outro paragraph.',
+      '',
+    ].join('\n');
+    await stubFsa(page);
+    await seedFakeFile(page, 'table.md', doc);
+    await pinMode(page, 'wysiwyg');
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    const editor = page.locator('.milkdown [contenteditable="true"]').first();
+    await editor.waitFor();
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.type('tail');
+    await page.waitForTimeout(1000); // let the debounced WYSIWYG push land
+
+    await page.keyboard.press('ControlOrMeta+Shift+d');
+    const overlay = page.getByTestId('diff-overlay');
+    await expect(overlay).toBeVisible({ timeout: 15_000 });
+
+    // Precise diff: several distinct chunks (table + edited paragraph), never
+    // the single whole-document blob.
+    await expect(overlay.getByTestId('diff-chunk-pos')).toHaveText(/\/ ([2-9]|\d\d+)/);
+    // Untouched lines stay unmarked.
+    await expect(
+      overlay.locator('.cm-merge-a .cm-changedLine', { hasText: 'Table doc' }),
+    ).toHaveCount(0);
+  });
 });

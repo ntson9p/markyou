@@ -181,6 +181,15 @@ function readonlyExtensions(wrap: boolean): Extension[] {
 export function createDiffEditor(opts: DiffEditorOptions): DiffEditorHandle {
   const current = getFullText(useDocStore.getState());
   const collapseUnchanged = opts.collapse ? { margin: 3, minSize: 4 } : undefined;
+  /**
+   * The library's default scanLimit (500 changed characters) is tuned for
+   * typing-time updates; a WYSIWYG re-serialization (D13) of a table-heavy
+   * document legitimately rewrites thousands of characters, and past the limit
+   * the diff degrades to one imprecise whole-document chunk — every line
+   * marked changed. A deliberate review action can afford a real diff; the
+   * timeout keeps pathological megabyte inputs from freezing the UI.
+   */
+  const diffConfig = { scanLimit: 20_000, timeout: 1_000 };
 
   let mergeView: MergeView | null = null;
   let editable: EditorView;
@@ -195,6 +204,7 @@ export function createDiffEditor(opts: DiffEditorOptions): DiffEditorHandle {
       highlightChanges: true,
       gutter: true,
       collapseUnchanged,
+      diffConfig,
     });
     editable = mergeView.b;
   } else {
@@ -209,6 +219,7 @@ export function createDiffEditor(opts: DiffEditorOptions): DiffEditorHandle {
             gutter: true,
             collapseUnchanged,
             mergeControls: renderUnifiedControl,
+            diffConfig,
           }),
           ...editableExtensions(opts),
         ],
