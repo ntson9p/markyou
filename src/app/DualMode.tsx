@@ -126,7 +126,11 @@ export function DualMode() {
                 </div>
               )}
               {parseError && <ParseErrorBanner message={parseError} />}
-              <div className="mx-auto w-full max-w-[72ch] px-6 py-6">
+              {/* Fills the pane rather than sitting in a capped measure: in
+                  dual mode the splitter is the width control (FR-2.4), so
+                  dragging it has to resize the rich editor. The ~72ch measure
+                  belongs to WYSIWYG single mode's centred page (§8.1). */}
+              <div className="w-full px-6 py-6" data-testid="dual-wysiwyg-page">
                 <WysiwygEditor
                   key={docId}
                   onEditorReady={onEditorReady}

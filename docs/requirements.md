@@ -267,6 +267,7 @@ Baseline **CommonMark**, extended with:
 
 - ☰ menu: New, Open, Recent, Save, Save As, Export (HTML/PDF/Copy rich), History, Metadata, Settings.
 - WYSIWYG single mode: document centered, max measure ~72ch, generous whitespace — Docs-like page feel.
+- Split columns (raw-mode preview, dual-mode WYSIWYG) fill their pane with no measure cap: the divider is the width control there, so dragging it resizes the rendered document itself (FR-2.4). The centred measure belongs to single mode, which has no divider.
 
 ### 8.2 Layout — small screens (< 768 px)
 

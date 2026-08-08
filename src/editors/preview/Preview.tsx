@@ -71,7 +71,13 @@ export function Preview({ onContainerReady, onRendered }: PreviewProps) {
       ) : (
         <article
           ref={articleRef}
-          className="md-doc mx-auto max-w-[72ch] px-8 py-6"
+          // Fills its column rather than sitting in a capped measure: here the
+          // splitter is the width control (FR-2.4), so dragging it has to
+          // resize the rendered document. The ~72ch measure belongs to WYSIWYG
+          // single mode's centred page (§8.1), which has no divider to size the
+          // text with.
+          className="md-doc w-full px-8 py-6"
+          data-testid="preview-doc"
           // Safe by design: `html` comes from the shared pipeline which runs
           // rehype-sanitize (allowlist schema) — see core/markdown/render.ts.
           dangerouslySetInnerHTML={{ __html: html }}
