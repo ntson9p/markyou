@@ -8,8 +8,8 @@ import {
   type FrontmatterState,
 } from '@/core/document/frontmatter';
 
-/** Author of a document version (plan §2.1). */
-export type Origin = 'raw' | 'wysiwyg' | 'meta' | 'system';
+/** Author of a document version (plan §2.1). 'diff' is the Review Changes editor. */
+export type Origin = 'raw' | 'wysiwyg' | 'meta' | 'system' | 'diff';
 
 /** How the document is bound to a real file. */
 export interface FileBinding {

@@ -81,6 +81,9 @@ export function MainMenu() {
           Save As… <DropdownMenuShortcut>Ctrl+Shift+S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('diff')}>
+          Review changes… <DropdownMenuShortcut>Ctrl+Shift+D</DropdownMenuShortcut>
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={!docOpen} onSelect={() => setActivePanel('export')}>
           Export…
         </DropdownMenuItem>

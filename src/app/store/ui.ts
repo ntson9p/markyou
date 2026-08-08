@@ -48,9 +48,19 @@ interface UiState {
   cursor: { line: number; col: number } | null;
   setCursor: (cursor: { line: number; col: number } | null) => void;
 
-  /** The open modal panel (metadata/history/export/settings/shortcuts), if any; not persisted. */
-  activePanel: 'metadata' | 'history' | 'export' | 'settings' | 'shortcuts' | null;
+  /** The open modal panel (metadata/history/export/settings/shortcuts/diff), if any; not persisted. */
+  activePanel: 'metadata' | 'history' | 'export' | 'settings' | 'shortcuts' | 'diff' | null;
   setActivePanel: (panel: UiState['activePanel']) => void;
+
+  /** Review Changes layout: side-by-side or unified; persisted like the mode. */
+  diffLayout: 'split' | 'unified';
+  setDiffLayout: (layout: 'split' | 'unified') => void;
+  /** Collapse unchanged regions in the diff; persisted. */
+  diffCollapse: boolean;
+  toggleDiffCollapse: () => void;
+  /** Soft-wrap long lines in the diff; persisted. Markdown prose wants this on. */
+  diffWrap: boolean;
+  toggleDiffWrap: () => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -82,6 +92,13 @@ export const useUiStore = create<UiState>()(
 
       activePanel: null,
       setActivePanel: (activePanel) => set({ activePanel }),
+
+      diffLayout: 'split',
+      setDiffLayout: (diffLayout) => set({ diffLayout }),
+      diffCollapse: true,
+      toggleDiffCollapse: () => set((s) => ({ diffCollapse: !s.diffCollapse })),
+      diffWrap: true,
+      toggleDiffWrap: () => set((s) => ({ diffWrap: !s.diffWrap })),
     }),
     {
       name: 'markyou.ui',
@@ -93,6 +110,9 @@ export const useUiStore = create<UiState>()(
         dualSplit: state.dualSplit,
         wysiwygMeasure: state.wysiwygMeasure,
         diagramSplit: state.diagramSplit,
+        diffLayout: state.diffLayout,
+        diffCollapse: state.diffCollapse,
+        diffWrap: state.diffWrap,
       }),
     },
   ),

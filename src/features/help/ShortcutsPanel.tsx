@@ -25,6 +25,8 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { action: 'Mode: Raw / WYSIWYG / Dual', keys: 'Ctrl+Shift+1 / 2 / 3' },
       { action: 'Toggle preview (raw mode)', keys: 'Ctrl+Shift+P' },
       { action: 'Toggle outline', keys: 'Ctrl+Shift+O' },
+      { action: 'Review changes', keys: 'Ctrl+Shift+D' },
+      { action: 'Next / Previous change (diff)', keys: 'Alt+↓ / Alt+↑' },
       { action: 'Keyboard shortcuts', keys: 'Ctrl+/' },
       { action: 'Settings', keys: 'Ctrl+,' },
     ],

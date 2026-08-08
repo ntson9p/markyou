@@ -4,6 +4,7 @@ import { countText } from '@/core/document/counts';
 import { useDocStore } from '@/core/document/store';
 import { useEditorsStore } from '@/app/store/editors';
 import { useUiStore } from '@/app/store/ui';
+import { useDiffStats } from '@/features/diff/stats';
 
 function useNow(intervalMs = 30_000): number {
   const [now, setNow] = useState(() => Date.now());
@@ -30,7 +31,9 @@ export function StatusBar() {
   const lastSavedAt = useDocStore((s) => s.lastSavedAt);
   const cursor = useUiStore((s) => s.cursor);
   const mode = useUiStore((s) => s.mode);
+  const setActivePanel = useUiStore((s) => s.setActivePanel);
   const selectionText = useEditorsStore((s) => s.selectionText);
+  const diffStats = useDiffStats();
   const now = useNow();
 
   const counts = useMemo(() => countText(body), [body]);
@@ -64,9 +67,28 @@ export function StatusBar() {
               L{cursor.line}:C{cursor.col}
             </span>
           )}
-          <span data-testid="status-save">
-            {dirty ? 'Unsaved changes' : savedLabel(lastSavedAt, now)}
-          </span>
+          {dirty ? (
+            // Review Changes entry point: the save-state text becomes a live
+            // chip with change stats exactly when there is something to review.
+            <button
+              type="button"
+              data-testid="status-save"
+              onClick={() => setActivePanel('diff')}
+              title="Review changes (Ctrl+Shift+D)"
+              className="flex items-center gap-1.5 rounded-full border border-transparent bg-primary/10 px-2 py-px text-primary hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring/60 outline-none"
+            >
+              <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+              Unsaved changes
+              {diffStats && (
+                <span data-testid="status-diff-stats" className="tabular-nums">
+                  <span className="text-diff-add">+{diffStats.added}</span>{' '}
+                  <span className="text-diff-del">−{diffStats.removed}</span>
+                </span>
+              )}
+            </button>
+          ) : (
+            <span data-testid="status-save">{savedLabel(lastSavedAt, now)}</span>
+          )}
         </>
       ) : (
         <>

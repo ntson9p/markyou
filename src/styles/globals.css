@@ -42,6 +42,14 @@
   --cm-fn: oklch(0.5 0.19 262);
   --cm-type: oklch(0.5 0.12 190);
   --cm-prop: oklch(0.45 0.1 240);
+
+  /* Review Changes diff (line tint, darker word tint, gutter/stat accent) */
+  --diff-add-line: oklch(0.65 0.15 150 / 10%);
+  --diff-add-text: oklch(0.65 0.15 150 / 28%);
+  --diff-add-accent: oklch(0.5 0.14 150);
+  --diff-del-line: oklch(0.55 0.2 25 / 8%);
+  --diff-del-text: oklch(0.55 0.2 25 / 22%);
+  --diff-del-accent: oklch(0.52 0.18 25);
 }
 
 .dark {
@@ -80,6 +88,14 @@
   --cm-fn: oklch(0.72 0.14 262);
   --cm-type: oklch(0.75 0.1 190);
   --cm-prop: oklch(0.72 0.09 240);
+
+  /* Review Changes diff (dark) */
+  --diff-add-line: oklch(0.7 0.16 150 / 14%);
+  --diff-add-text: oklch(0.7 0.16 150 / 32%);
+  --diff-add-accent: oklch(0.75 0.15 150);
+  --diff-del-line: oklch(0.65 0.2 25 / 12%);
+  --diff-del-text: oklch(0.65 0.2 25 / 30%);
+  --diff-del-accent: oklch(0.72 0.17 25);
 }
 
 @theme inline {
@@ -107,6 +123,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-surface: var(--surface);
+  --color-diff-add: var(--diff-add-accent);
+  --color-diff-del: var(--diff-del-accent);
 }
 
 @layer base {
@@ -132,4 +150,41 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/* Review Changes: the per-chunk revert gutter lives OUTSIDE the two CM editors
+   (a sibling column in the merge view DOM), so its styling cannot come from an
+   editor theme extension. */
+.cm-merge-revert {
+  width: 2rem !important;
+  border-inline: 1px solid var(--border);
+}
+.cm-merge-revert .diff-revert-btn {
+  padding: 2px 0;
+  color: var(--primary);
+  border-radius: 4px;
+}
+.cm-merge-revert .diff-revert-btn:hover {
+  background-color: color-mix(in oklch, var(--primary) 14%, transparent);
+}
+.cm-merge-revert .diff-revert-btn svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+/* Unified view: our revert button floats at the chunk's top-right. */
+.cm-deletedChunk .diff-revert-btn {
+  border: none;
+  cursor: pointer;
+  background: var(--background);
+  color: var(--primary);
+  border-radius: 4px;
+  padding: 1px 4px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.cm-deletedChunk .diff-revert-btn:hover {
+  background-color: color-mix(in oklch, var(--primary) 14%, var(--background));
+}
+.cm-deletedChunk .diff-revert-btn svg {
+  display: inline-block;
+  vertical-align: middle;
 }

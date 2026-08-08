@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 
 import { EditorArea } from '@/app/EditorArea';
 import { Notices } from '@/app/Notices';
@@ -20,6 +20,12 @@ import { SettingsPanel } from '@/features/settings/SettingsPanel';
 import { useSettingsStore } from '@/features/settings/store';
 import { HistoryPanel } from '@/features/snapshots/HistoryPanel';
 import { startSnapshotScheduler } from '@/features/snapshots/snapshots';
+
+// Lazy like the editor engines (initial-JS budget §7): @codemirror/merge and
+// the diff wiring load on first open, not at boot.
+const DiffOverlay = lazy(() =>
+  import('@/features/diff/DiffOverlay').then((m) => ({ default: m.DiffOverlay })),
+);
 
 const MODE_SHORTCUTS: Record<string, EditorMode> = {
   Digit1: 'raw',
@@ -50,6 +56,14 @@ function useGlobalShortcuts() {
       if (e.code === 'KeyO' && e.shiftKey && !e.altKey) {
         e.preventDefault();
         useUiStore.getState().toggleOutline();
+        return;
+      }
+      // Review changes overlay: Ctrl+Shift+D toggles the diff of unsaved edits.
+      if (e.code === 'KeyD' && e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        if (useDocStore.getState().status !== 'open') return;
+        const ui = useUiStore.getState();
+        ui.setActivePanel(ui.activePanel === 'diff' ? null : 'diff');
         return;
       }
       // Keyboard-shortcuts sheet (§8.3): Ctrl+/
@@ -140,6 +154,7 @@ function useLeaveWarning() {
 export function AppShell() {
   const status = useDocStore((s) => s.status);
   const outlineVisible = useUiStore((s) => s.outlineVisible);
+  const diffOpen = useUiStore((s) => s.activePanel === 'diff');
   const isSmall = useIsSmallScreen();
 
   useGlobalShortcuts();
@@ -178,6 +193,11 @@ export function AppShell() {
       <ShortcutsPanel />
       <SettingsPanel />
       <DiagramEditorModal />
+      {diffOpen && (
+        <Suspense fallback={null}>
+          <DiffOverlay />
+        </Suspense>
+      )}
     </div>
   );
 }
