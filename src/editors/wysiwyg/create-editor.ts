@@ -55,6 +55,7 @@ import { configureListItemBlock } from './plugins/list-item-block';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { configureTableBlock, tableHandleResetPlugin } from './plugins/table-block';
+import { tableEnterKeymap } from './plugins/table-keymap';
 import { trailingClickPlugin } from './plugins/trailing-click';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
@@ -218,6 +219,9 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       })
       // Our keymap registers before the presets so §9.3 bindings win.
       .use(wysiwygKeymap)
+      // Likewise for Enter in a table, which the gfm preset routes to
+      // ExitTable — see the plugin for why that needs intercepting.
+      .use(tableEnterKeymap)
       .use(wysiwygRemarkPlugins)
       .use(remarkReferencesPlugin)
       .use(commonmarkPreset)

@@ -51,6 +51,14 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
     ],
   },
   {
+    title: 'Table (WYSIWYG)',
+    items: [
+      { action: 'Next / Previous cell', keys: 'Tab / Shift+Tab' },
+      { action: 'Cell below', keys: 'Enter' },
+      { action: 'Leave table', keys: 'Ctrl+Enter' },
+    ],
+  },
+  {
     title: 'Code block (WYSIWYG)',
     items: [
       { action: 'Indent / Outdent', keys: 'Tab / Shift+Tab' },
