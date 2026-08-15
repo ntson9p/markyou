@@ -55,6 +55,7 @@ import { configureListItemBlock } from './plugins/list-item-block';
 import { placeholderPlugin } from './plugins/placeholder';
 import { configureSlashMenu, slashMenu } from './plugins/slash-menu';
 import { configureTableBlock, tableHandleResetPlugin } from './plugins/table-block';
+import { trailingClickPlugin } from './plugins/trailing-click';
 import { calloutView } from './views/callout-view';
 import { definitionView } from './views/definition-view';
 import { diagramView } from './views/diagram-view';
@@ -254,6 +255,7 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
       .use(findPlugin)
       .use(listA11yPlugin)
       .use(tableHandleResetPlugin)
+      .use(trailingClickPlugin)
       .use(listener)
       .use(statePlugin)
       .create()

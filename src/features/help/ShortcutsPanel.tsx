@@ -55,6 +55,8 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
     items: [
       { action: 'Indent / Outdent', keys: 'Tab / Shift+Tab' },
       { action: 'Leave code block', keys: 'Esc' },
+      { action: 'Leave from a blank last line', keys: 'Enter' },
+      { action: 'Leave and start a new block', keys: 'Ctrl+Enter' },
     ],
   },
 ];
