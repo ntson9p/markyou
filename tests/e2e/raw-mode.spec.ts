@@ -94,18 +94,28 @@ test.describe('raw mode + preview (FR-3, FR-4)', () => {
       '\n\n',
     );
     await openRawWithDoc(page, lines);
-    await page.waitForTimeout(500); // let preview render
 
     const preview = page.getByTestId('preview');
-    const before = await preview.evaluate((el) => el.scrollTop);
+    const previewTop = () => preview.evaluate((el) => el.scrollTop);
+    const scrollRawTo = (fraction: number) =>
+      page.locator('.cm-scroller').evaluate((el, f) => {
+        el.scrollTop = f * el.scrollHeight;
+      }, fraction);
 
-    await page.locator('.cm-scroller').evaluate((el) => {
-      el.scrollTop = el.scrollHeight / 2;
-    });
-    await page.waitForTimeout(300);
+    // Sync interpolates between `data-sourcepos` anchors, so it does nothing at
+    // all until the preview has rendered them. Wait on the content itself
+    // rather than on a delay long enough to usually cover it.
+    await expect(preview.locator('h2')).toHaveCount(120, { timeout: 15_000 });
 
-    const after = await preview.evaluate((el) => el.scrollTop);
-    expect(after).toBeGreaterThan(before + 100);
+    // Typing leaves the caret at the end, so both panes may already be at the
+    // bottom. Drive the baseline to the top instead of assuming it: sampling it
+    // blind records whatever the render race happened to leave behind, and a
+    // baseline at the bottom turns the assertion below into a backwards test.
+    await scrollRawTo(0);
+    await expect.poll(previewTop).toBeLessThan(100);
+
+    await scrollRawTo(0.5);
+    await expect.poll(previewTop).toBeGreaterThan(100);
   });
 
   test('cursor position shows in the status bar (FR-10.3)', async ({ page }) => {
