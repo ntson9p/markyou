@@ -137,20 +137,26 @@
    other code block), but users accustomed to Obsidian-style live diagram
    preview may expect it to render sooner. Low priority.
 
-10. **[MEDIUM] Inserting an image via the toolbar makes it overlap the
-    adjacent paragraph text instead of sitting cleanly on its own.** Typing
-    text, then using the "Insert image" toolbar button to add a normal-sized
-    image (200x100) at the cursor (end of the text): the image renders as an
-    inline atom (`span.md-image > img`, CSS: `display: inline-block;
-    vertical-align: bottom`) sharing the same text line as the paragraph.
-    Because the image is much taller than the surrounding text's line height,
-    it visually overlaps upward over the text instead of appearing as a clean
-    block below it — confirmed visually (screenshot) and via computed
-    bounding rects (image rect overlaps the paragraph's text rect). Most
-    users inserting an image via a dedicated "Insert image" button expect a
-    normal, clearly-separated image (as most editors default images to
-    block-level), not one that collides with the text that was just typed.
-    (Screenshot: 59-image-fresh-shot.png)
+10. **~~[MEDIUM] Inserting an image via the toolbar makes it overlap the
+    adjacent paragraph text.~~ RETRACTED — not a bug; the original measurement
+    was wrong.** The claim was that a toolbar-inserted 200x100 image "visually
+    overlaps upward over the text". Re-measured properly and it does not: the
+    original check compared the image's rect against the *paragraph element's*
+    rect, and since the paragraph contains the image those always intersect, so
+    the test could only ever report an overlap. Measuring the text glyphs
+    instead (a DOM Range over the paragraph's text nodes) gives
+
+        img:  top 199  bottom 299  left 621.97  right 821.97
+        text: top 282  bottom 303  left 370.50  right 621.97
+        overlaps: false
+
+    The edges abut exactly at 621.97 and the paragraph's line box grows from
+    ~21px to 136px to accommodate the image — textbook `inline-block` layout,
+    confirmed visually too (shots 80a/80b). What remains is a design
+    preference, not a defect: "Insert image" places the image inline at the
+    caret, which is what `text ![](src)` means in CommonMark. There is no
+    block-image node in markdown, so rendering a lone image as a block would
+    make one paragraph *look* like two. Left as is deliberately.
 
 ## Notes / non-issues (test harness artifacts, not app bugs)
 
