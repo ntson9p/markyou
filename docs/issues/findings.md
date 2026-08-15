@@ -10,16 +10,12 @@
    intentional visual grouping. (Measured precisely via getBoundingClientRect;
    screenshot: 06-bullet-list-fresh.png)
 
-2. **Backspace on a solo list item needs two presses, not one.** Create a list
-   with exactly one item ("- only item"), put the caret at the very start, and
-   press Backspace: nothing happens (no-op). A second Backspace is required to
-   dissolve it into a plain paragraph. By contrast, Backspace at the start of
-   the *first item of a multi-item list* dissolves that item into a paragraph
-   in a single press (verified: "- first / second" → Backspace at start of
-   "first" → immediately becomes `<p>first</p>` + a one-item list "second").
-   This inconsistency means the single most common "oops, undo this bullet"
-   gesture (type "- ", immediately Backspace) silently fails on the first try.
-   (Screenshots: 16-backspace-solo-item.png, 15-backspace-first-item.png)
+2. **~~Backspace on a solo list item needs two presses, not one.~~ RETRACTED —
+   not a bug; the solo/multi contrast was an artifact of two diagnostic scripts
+   running at different speeds.** The symptom is real but only reachable when
+   Backspace arrives within ~10ms of a caret-moving key, which scripted input
+   can do and typing cannot. Moved to the harness-artifacts section below,
+   which has the measurements.
 
 3. **Callout title text is oddly offset from its icon in the WYSIWYG editor**
    (not in the read-only preview). `.wysiwyg-root .callout-title` (wysiwyg.css
@@ -188,6 +184,48 @@
     CSS-only and correct either way.
 
 ## Notes / non-issues (test harness artifacts, not app bugs)
+
+- **Backspace at the start of a list item looks like a no-op when the key
+  arrives <10ms after a caret-moving key** (was finding #2, retracted above).
+  The threshold is sharp, and the pause *after typing* is irrelevant — only the
+  pause before Backspace matters:
+
+      afterType  afterHome   first Backspace
+           0ms        0ms    NO-OP
+           0ms       10ms    dissolved (works)
+         200ms        0ms    NO-OP
+
+  The claimed "solo needs two presses, multi needs one" contrast does not
+  survive a direct control — both shapes fail together and succeed together
+  when given the same timing:
+
+      NO-OP   solo,  Home->Backspace immediately
+      NO-OP   multi, ArrowUp->Backspace immediately
+      works   solo,  human speed (60ms/key)
+      works   multi, human speed (60ms/key)
+
+  The original comparison used two scripts with different numbers of caret keys
+  before Backspace (`16-backspace-solo-item.mjs` one, `15-backspace-first-item
+  .mjs` three) that happened to land on opposite sides of the threshold; it is
+  jitter around the CDP round-trip time, not key count — a solo run given three
+  caret keys still failed.
+
+  Mechanism: `Home` is not intercepted by any keymap, so the browser moves the
+  DOM selection and ProseMirror learns of it asynchronously via
+  `selectionchange`. Until then the preset's `liftFirstListItem` bails on
+  `$from.parentOffset !== 0`, and `joinBackward` also consults
+  `view.endOfTextblock('backward', state)`, which reads live DOM state. Both
+  guards decline, no other handler claims the key, and the result is a clean
+  no-op with no text deleted. Once the selection is observed, one press
+  dissolves the item — verified across six variants (`- ` + immediate
+  Backspace, ordered lists, `Ctrl+Home`, `ArrowLeft`, `Home`, and an item
+  preceded by a paragraph).
+
+  Deliberately not fixed: the reflex gesture the finding worried about (type
+  `- `, immediately Backspace) works, because typing supplies the settle time.
+  Guarding against it would mean overriding the editor's most load-bearing key
+  to re-derive the caret from the DOM, to chase an input rate humans cannot
+  produce.
 
 - Switching mode (WYSIWYG → Raw) immediately after typing, with zero wait,
   showed an apparently-empty Raw pane. This is because the WYSIWYG → store
