@@ -158,6 +158,35 @@
     block-image node in markdown, so rendering a lone image as a block would
     make one paragraph *look* like two. Left as is deliberately.
 
+11. **Live-typing a nested list emits a spurious blank line, silently turning a
+    tight list into a loose one.** Found while investigating #1; logged for a
+    later decision rather than fixed. Building `- one / - two / Tab / nested a
+    / nested b / Shift-Tab / three` by hand in the WYSIWYG editor serializes as
+
+        - one
+        - two
+                      <- blank line
+          - nested a
+          - nested b
+        - three
+
+    while the *same list loaded from a file* round-trips byte-identically with
+    no blank line. Both `<ul>`s carry `data-spread="false"` in the editor, so
+    the list nodes themselves are tight — the blank line most likely comes from
+    the `listItem` node's own `spread` attr, which `mdast-util-to-markdown`
+    consults independently of the list's (see
+    `src/editors/wysiwyg/plugins/list-spread-fix.ts`, which already normalizes
+    these attrs to real booleans for the list nodes).
+
+    Why it matters: per CommonMark a blank line anywhere in a list makes the
+    *whole outer list* loose, so reopening the file wraps every top-level item
+    in `<p>` and the preview renders it at 12px instead of 4px. Confirmed by
+    reading the preview's own output for a live-typed list — `<li><p>one</p>
+    </li>`, with `data-sourcepos` skipping the blank line. So this changes the
+    bytes written to the user's file and the rendering of the reopened
+    document, not just the editor's appearance. Independent of #1, whose fix is
+    CSS-only and correct either way.
+
 ## Notes / non-issues (test harness artifacts, not app bugs)
 
 - Switching mode (WYSIWYG → Raw) immediately after typing, with zero wait,
