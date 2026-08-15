@@ -50,6 +50,13 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { action: 'Quote', keys: 'Ctrl+Shift+B' },
     ],
   },
+  {
+    title: 'Code block (WYSIWYG)',
+    items: [
+      { action: 'Indent / Outdent', keys: 'Tab / Shift+Tab' },
+      { action: 'Leave code block', keys: 'Esc' },
+    ],
+  },
 ];
 
 /** A key combo rendered as <kbd> chips. */

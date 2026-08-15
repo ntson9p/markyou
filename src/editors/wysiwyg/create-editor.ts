@@ -47,6 +47,7 @@ import { wysiwygRemarkPlugins } from './plugins/remark-plugins';
 import { wysiwygKeymap } from './shortcuts';
 import { blockDropCursor, configureBlockHandle } from './plugins/block-handle';
 import { bubbleTooltip, configureBubbleMenu } from './plugins/bubble-menu';
+import { codeBlockKeymap } from './plugins/code-block-keymap';
 import { findPlugin } from './plugins/find';
 import { imagePastePlugin } from './plugins/image-paste';
 import { listA11yPlugin } from './plugins/list-a11y';
@@ -198,6 +199,8 @@ export function createWysiwygEditor(options: CreateWysiwygEditorOptions): Promis
             rawSyntaxHighlighting,
             // Label the code-block editor for screen readers (§a11y).
             CmEditorView.contentAttributes.of({ 'aria-label': 'Code block editor' }),
+            // Tab to indent, Escape/blank-line-Enter to get back out.
+            codeBlockKeymap(ctx),
           ],
         }));
         configureLinkTooltip(ctx);
