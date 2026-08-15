@@ -1,4 +1,5 @@
-import { $view } from '@milkdown/kit/utils';
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state';
+import { $prose, $view } from '@milkdown/kit/utils';
 import type { NodeViewConstructor } from '@milkdown/kit/prose/view';
 import type { EditorView } from '@milkdown/kit/prose/view';
 
@@ -97,4 +98,42 @@ function mathViewFactory(displayMode: boolean): NodeViewConstructor {
 export const mathInlineView = $view(mathInlineSchema.node, () => mathViewFactory(false));
 export const mathBlockView = $view(mathBlockSchema.node, () => mathViewFactory(true));
 
-export const mathViews = [mathInlineView, mathBlockView];
+/**
+ * Tag a transaction with `setMeta(openMathBlockEditorKey, pos)` to pop the
+ * LaTeX editor for the math block it creates at `pos`. Used by the `$$ `
+ * input rule so typing it goes straight to writing math instead of leaving an
+ * empty stub the user has to go back and click.
+ */
+export const openMathBlockEditorKey = new PluginKey<number | null>('openMathBlockEditor');
+
+const mathAutoOpenPlugin = $prose(
+  () =>
+    new Plugin<number | null>({
+      key: openMathBlockEditorKey,
+      state: {
+        init: () => null,
+        // The request has to survive until a view update actually runs: other
+        // plugins append transactions to the same dispatch, and only the final
+        // state reaches the view hook. So it stays pending (position-mapped)
+        // until the hook below clears it explicitly.
+        apply: (tr, pending) => {
+          const requested = tr.getMeta(openMathBlockEditorKey) as number | null | undefined;
+          if (requested !== undefined) return requested;
+          return pending == null ? null : tr.mapping.map(pending);
+        },
+      },
+      view: () => ({
+        update: (view) => {
+          const pos = openMathBlockEditorKey.getState(view.state);
+          if (pos == null) return;
+          const dom = view.nodeDOM(pos);
+          // Clear before opening — the popover focuses its own textarea, and a
+          // later dispatch would pull focus straight back to the document.
+          view.dispatch(view.state.tr.setMeta(openMathBlockEditorKey, null));
+          if (dom instanceof HTMLElement) openMathEditor(view, () => pos, dom, true);
+        },
+      }),
+    }),
+);
+
+export const mathViews = [mathInlineView, mathBlockView, mathAutoOpenPlugin];

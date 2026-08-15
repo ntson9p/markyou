@@ -1,11 +1,11 @@
 import { InputRule } from '@milkdown/kit/prose/inputrules';
-import { NodeSelection } from '@milkdown/kit/prose/state';
 import { $inputRule } from '@milkdown/kit/utils';
 
 import { CALLOUT_TYPES, type CalloutType } from '@/core/markdown/callouts';
 
 import { calloutSchema } from './nodes/callout';
 import { mathBlockSchema, mathInlineSchema } from './nodes/math';
+import { openMathBlockEditorKey } from './views/math-views';
 
 /**
  * Markdown autoformat rules beyond the presets (FR-5.3): `$math$`, `$$` math
@@ -26,18 +26,29 @@ export const mathInlineInputRule = $inputRule((ctx) => {
   });
 });
 
-/** Typing `$$` then space on an empty line creates a math block. */
+/**
+ * Typing `$$` then space on an empty line creates a math block and opens its
+ * LaTeX editor.
+ *
+ * The paragraph is swapped for the math block in a single step: deleting the
+ * `$$` first and *then* replacing the paragraph range would apply stale,
+ * pre-delete positions to the shortened document and throw ("Position N out of
+ * range"), which aborted the whole input and left `$$` sitting there as text.
+ */
 export const mathBlockInputRule = $inputRule((ctx) => {
-  return new InputRule(/^\$\$\s$/, (state, _match, start, end) => {
+  return new InputRule(/^\$\$\s$/, (state, _match, start) => {
     const $start = state.doc.resolve(start);
-    if ($start.parent.type.name !== 'paragraph') return null;
-    const type = mathBlockSchema.type(ctx);
+    const paragraph = $start.parent;
+    if (paragraph.type.name !== 'paragraph') return null;
+    // Only when `$$` is the paragraph's whole content — replacing the block
+    // would otherwise swallow whatever sits after the caret.
+    if ($start.parentOffset !== 0 || paragraph.content.size !== 2) return null;
+
     const from = $start.before();
-    const to = $start.after();
-    let tr = state.tr.delete(start, end);
-    tr = tr.replaceRangeWith(from, to, type.create({ value: '' }));
-    const pos = Math.min(from, tr.doc.content.size - 1);
-    return tr.setSelection(NodeSelection.create(tr.doc, pos));
+    const type = mathBlockSchema.type(ctx);
+    return state.tr
+      .replaceRangeWith(from, $start.after(), type.create({ value: '' }))
+      .setMeta(openMathBlockEditorKey, from);
   });
 });
 
