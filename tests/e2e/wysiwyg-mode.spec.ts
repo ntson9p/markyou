@@ -55,6 +55,24 @@ const TABLE_DOC = [
   '',
 ].join('\n');
 
+/** A tight nested list beside a loose one, for the FR-4.4 spacing test. */
+const LIST_DOC = [
+  '- one',
+  '- two',
+  '  - nested a',
+  '  - nested b',
+  '- three',
+  '',
+  '# divider',
+  '',
+  '- loose one',
+  '',
+  '  second paragraph',
+  '',
+  '- loose two',
+  '',
+].join('\n');
+
 async function newWysiwygDoc(page: Page) {
   await page.goto('/');
   await page.getByTestId('welcome-new').click();
@@ -232,6 +250,51 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     // The type picker switches the callout kind in place.
     await callout.locator('.callout-picker').selectOption('warning');
     await expect(editor(page).locator('.callout-warning')).toBeVisible();
+  });
+
+  test('a tight nested list keeps one even gap; loose items stay airy (FR-4.4)', async ({
+    page,
+  }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'lists.md', LIST_DOC);
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page).locator('ul').first()).toBeVisible({ timeout: 15000 });
+
+    const gaps = await page.evaluate(() => {
+      const round = (v: number) => Math.round(v * 100) / 100;
+      const root = document.querySelector('.wysiwyg-root .ProseMirror')!;
+      const blocks = [...root.querySelectorAll('.milkdown-list-item-block')];
+
+      const parent = blocks.find((b) => b.querySelector('ul'))!;
+      const nested = parent.querySelector('ul')!;
+      const parentText = parent.querySelector('.content-dom > p')!;
+      const nestedItems = [...nested.children];
+      const after = parent.nextElementSibling!;
+
+      const loose = root.querySelector('ul[data-spread="true"]');
+      const looseParas = loose ? [...loose.querySelectorAll('.content-dom > p')] : [];
+
+      const gap = (a: Element, b: Element) =>
+        round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom);
+
+      return {
+        sibling: gap(blocks[0], blocks[1]),
+        intoNested: gap(parentText, nested),
+        nestedSibling: gap(nestedItems[0], nestedItems[1]),
+        outOfNested: gap(nested, after),
+        // A loose item's two paragraphs must keep their own, wider rhythm.
+        looseParagraphs: looseParas.length > 1 ? gap(looseParas[0], looseParas[1]) : null,
+      };
+    });
+
+    // Indenting used to cost 12px where every other gap costs 4px, because
+    // `.md-doc p`'s margin survived on the paragraph before the nested list.
+    expect(gaps.intoNested).toBe(gaps.sibling);
+    expect(gaps.nestedSibling).toBe(gaps.sibling);
+    expect(gaps.outOfNested).toBe(gaps.sibling);
+    // Scoping the fix to the list boundary leaves loose items alone.
+    expect(gaps.looseParagraphs).toBeGreaterThan(gaps.sibling);
   });
 
   test('callout title sits beside its icon, picker stays right (FR-5.10)', async ({ page }) => {

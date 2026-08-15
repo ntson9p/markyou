@@ -888,6 +888,16 @@ body > div[data-show] .link-preview,
   margin-block: 0.25em;
 }
 
+/* A nested list is an *item* boundary, not a paragraph boundary. `:last-child`
+ * above can't reach the paragraph that precedes one — it isn't last — so
+ * `.md-doc p`'s 0.75em survived there and swallowed the nested list's 0.25em,
+ * making one indent cost 12px where every other item gap costs 4px. Zeroing it
+ * lets the nested list's own margin set the gap. Scoped to the boundary so a
+ * loose item's consecutive paragraphs keep their rhythm. */
+.wysiwyg-root .milkdown-list-item-block .content-dom > :has(+ :is(ul, ol)) {
+  margin-bottom: 0;
+}
+
 /* Item spacing, now that the blocks inside an item no longer provide it.
  * Tight lists get `.md-doc li`'s rhythm; `data-spread` mirrors the mdast
  * `spread` flag, so loose lists keep the wider gap the preview renders for
