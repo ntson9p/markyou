@@ -4,6 +4,7 @@ dev-dist/
 coverage/
 playwright-report/
 test-results/
+temp/
 *.local
 .DS_Store
 *.tsbuildinfo
