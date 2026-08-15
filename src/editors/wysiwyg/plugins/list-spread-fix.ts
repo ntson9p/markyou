@@ -73,6 +73,18 @@ export const listItemSpreadFix = extendListItemSchemaForTask.extendSchema((prev)
   const base = prev(ctx);
   return {
     ...base,
+    /**
+     * Upstream defaults `list_item.spread` to `true` while both list nodes
+     * default to `false`, so an item born from the `- ` input rule (which calls
+     * `createAndFill()` with no attrs) is loose inside a tight list — a state
+     * remark never produces. It stays invisible until the item gains a second
+     * child, because `mdast-util-to-markdown` only consults an item's spread
+     * when joining its own children; then it writes a blank line between the
+     * paragraph and its nested list, which makes the whole list loose on
+     * reparse. `splitListItem`/`sinkListItem` copy attrs from the item they act
+     * on, so creation is the only way the default is ever read.
+     */
+    attrs: { ...base.attrs, spread: { default: false, validate: 'boolean' } },
     parseMarkdown: {
       match: base.parseMarkdown.match,
       runner: (state, node, type) => {

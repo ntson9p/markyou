@@ -154,10 +154,10 @@
     block-image node in markdown, so rendering a lone image as a block would
     make one paragraph *look* like two. Left as is deliberately.
 
-11. **Live-typing a nested list emits a spurious blank line, silently turning a
-    tight list into a loose one.** Found while investigating #1; logged for a
-    later decision rather than fixed. Building `- one / - two / Tab / nested a
-    / nested b / Shift-Tab / three` by hand in the WYSIWYG editor serializes as
+11. **[MEDIUM] Live-typing a nested list emits a spurious blank line, silently
+    turning a tight list into a loose one.** Found while investigating #1.
+    Building `- one / - two / Tab / nested a / nested b / Shift-Tab / three` by
+    hand in the WYSIWYG editor serializes as
 
         - one
         - two
@@ -167,21 +167,33 @@
         - three
 
     while the *same list loaded from a file* round-trips byte-identically with
-    no blank line. Both `<ul>`s carry `data-spread="false"` in the editor, so
-    the list nodes themselves are tight — the blank line most likely comes from
-    the `listItem` node's own `spread` attr, which `mdast-util-to-markdown`
-    consults independently of the list's (see
-    `src/editors/wysiwyg/plugins/list-spread-fix.ts`, which already normalizes
-    these attrs to real booleans for the list nodes).
+    no blank line. Dumping the real ProseMirror attrs (via `pmViewDesc`) shows
+    every live-created `list_item` carrying `spread=true` where the parsed ones
+    carry `false` — upstream defaults `list_item.spread` to `true` while both
+    list nodes default to `false`, and the `- ` input rule builds its item with
+    `createAndFill()` and no attrs. `mdast-util-to-markdown` consults an item's
+    spread only when joining the item's *own* children, which is why a flat
+    list looks fine and the blank line appears the moment an item gains a
+    nested list. Same defect for ordered and task lists — they share the
+    schema. `splitListItem`/`sinkListItem` copy attrs from the item they act
+    on, so appending or Tab-nesting inside a loaded list was already correct;
+    creation was the only vector.
 
-    Why it matters: per CommonMark a blank line anywhere in a list makes the
-    *whole outer list* loose, so reopening the file wraps every top-level item
-    in `<p>` and the preview renders it at 12px instead of 4px. Confirmed by
-    reading the preview's own output for a live-typed list — `<li><p>one</p>
-    </li>`, with `data-sourcepos` skipping the blank line. So this changes the
-    bytes written to the user's file and the rendering of the reopened
-    document, not just the editor's appearance. Independent of #1, whose fix is
-    CSS-only and correct either way.
+    Why it matters: it changes the bytes written to the user's file for the
+    most ordinary list gesture, and it makes the two panes disagree about that
+    file. `mdast-util-to-hast` escalates any loose *item* to the whole list, so
+    the preview wraps every item in `<p>` and renders 12px gaps, while Milkdown
+    reads only `list.spread` and renders the same file tight at 4px:
+
+        - one / - two / <blank> /   -> list.spread=false, items false,true,false
+          - nested a / - three           preview: <li><p>one</p>… (loose)
+                                         wysiwyg: tight
+
+    Fixed by overriding the attr default to `false` in
+    `src/editors/wysiwyg/plugins/list-spread-fix.ts`, which already owns this
+    class of bug. Parsing is untouched, so genuinely loose files still
+    round-trip. Independent of #1, whose fix is CSS-only and correct either
+    way.
 
 ## Notes / non-issues (test harness artifacts, not app bugs)
 

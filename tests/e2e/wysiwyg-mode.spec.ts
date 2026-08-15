@@ -252,6 +252,39 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     await expect(editor(page).locator('.callout-warning')).toBeVisible();
   });
 
+  test('a nested list built by typing saves with no spurious blank line (D13)', async ({
+    page,
+  }) => {
+    await stubFsa(page);
+    await seedFakeFile(page, 'typed.md', '');
+    await page.goto('/');
+    await page.getByTestId('welcome-open').click();
+    await expect(editor(page)).toBeVisible({ timeout: 15000 });
+    await editor(page).click();
+
+    // Build the list by hand, the way a user does. The round-trip fixtures all
+    // load from disk, so only a typed list exercises the schema's attr
+    // defaults -- and `list_item.spread` used to default to `true`, which put a
+    // blank line between "two" and its nested list and made the whole list
+    // loose on reparse.
+    await page.keyboard.type('- one');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('two');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('nested a');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.type('three');
+    await page.waitForTimeout(600); // push debounce
+
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(page.getByTestId('status-save')).toContainText('Saved');
+
+    const disk = await getFakeDisk(page);
+    expect(disk['typed.md']).toBe('- one\n- two\n  - nested a\n- three\n');
+  });
+
   test('a tight nested list keeps one even gap; loose items stay airy (FR-4.4)', async ({
     page,
   }) => {
