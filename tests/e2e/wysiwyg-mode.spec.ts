@@ -234,6 +234,37 @@ test.describe('WYSIWYG mode (FR-5)', () => {
     await expect(editor(page).locator('.callout-warning')).toBeVisible();
   });
 
+  test('callout title sits beside its icon, picker stays right (FR-5.10)', async ({ page }) => {
+    await newWysiwygDoc(page);
+    await page.keyboard.type('> [!note] ');
+    await expect(editor(page).locator('.callout-note')).toBeVisible();
+
+    // The icon is a ::before pseudo-element with no rect of its own, so compare
+    // the title against where a flush title would start. `justify-content:
+    // space-between` on this three-child row used to strand it ~174px right.
+    const layout = await page.evaluate(() => {
+      const row = document.querySelector('.wysiwyg-root .callout-title')!;
+      const text = row.querySelector('.callout-title-text')!;
+      const picker = row.querySelector('.callout-picker')!;
+      const cs = getComputedStyle(row);
+      const num = (v: string) => (v === 'normal' ? 0 : parseFloat(v));
+      const r = row.getBoundingClientRect();
+      const flushLeft =
+        r.left +
+        num(cs.paddingLeft) +
+        num(getComputedStyle(row, '::before').width) +
+        num(cs.columnGap);
+      return {
+        titleOffsetPastIcon: text.getBoundingClientRect().left - flushLeft,
+        pickerGapToRightEdge: r.right - num(cs.paddingRight) - picker.getBoundingClientRect().right,
+      };
+    });
+
+    // Sub-pixel tolerance only — anything larger means the title is floating.
+    expect(Math.abs(layout.titleOffsetPastIcon)).toBeLessThan(2);
+    expect(Math.abs(layout.pickerGapToRightEdge)).toBeLessThan(2);
+  });
+
   test('code block has a language picker with highlighting (FR-5.1)', async ({ page }) => {
     await newWysiwygDoc(page);
     // The fence input rule triggers on trailing whitespace.

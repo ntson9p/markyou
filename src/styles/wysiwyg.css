@@ -222,15 +222,21 @@
 
 /* ---------- callouts (shared .callout theme + picker) ---------- */
 
+/* No `justify-content` here on purpose: the row has three flex children — the
+ * ::before icon, the title text, and the picker — so `space-between` stranded
+ * the title in the middle of the row instead of beside its icon. The picker is
+ * pushed right by its own auto margin below, which is the only part that
+ * actually wants to be right-aligned. Matches `.md-doc .callout-title`. */
 .wysiwyg-root .callout-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
   user-select: none;
 }
 
 .callout-picker {
+  /* Holds the picker against the row's right edge without moving the title. */
+  margin-left: auto;
   font-size: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
