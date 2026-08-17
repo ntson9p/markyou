@@ -7,9 +7,65 @@
     <meta name="theme-color" content="#4f46e5" />
     <meta
       name="description"
-      content="MarkYou — local-first WYSIWYG markdown editor with raw, rich, and dual modes."
+      content="Free local-first WYSIWYG markdown editor in your browser. Raw, rich, and dual-pane modes with Mermaid diagrams, KaTeX math, and full offline support. No signup."
     />
-    <title>MarkYou</title>
+    <link rel="canonical" href="https://markyou.web.app/" />
+    <title>MarkYou — Local-First WYSIWYG Markdown Editor</title>
+
+    <!-- Open Graph: controls the link preview on Reddit, Hacker News, Slack, LinkedIn. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MarkYou" />
+    <meta property="og:url" content="https://markyou.web.app/" />
+    <meta property="og:title" content="MarkYou — Local-First WYSIWYG Markdown Editor" />
+    <meta
+      property="og:description"
+      content="Free local-first WYSIWYG markdown editor in your browser. Raw, rich, and dual-pane modes with Mermaid diagrams, KaTeX math, and full offline support. No signup."
+    />
+    <meta property="og:image" content="https://markyou.web.app/icons/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="The MarkYou logo" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Square icon, so `summary` rather than `summary_large_image`. Switch once a
+         1200x630 screenshot exists at /og-image.png. -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="MarkYou — Local-First WYSIWYG Markdown Editor" />
+    <meta
+      name="twitter:description"
+      content="Free local-first WYSIWYG markdown editor in your browser. Raw, rich, and dual-pane modes with Mermaid diagrams, KaTeX math, and full offline support. No signup."
+    />
+    <meta name="twitter:image" content="https://markyou.web.app/icons/icon-512.png" />
+    <meta name="twitter:image:alt" content="The MarkYou logo" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MarkYou",
+        "url": "https://markyou.web.app/",
+        "description": "Free local-first WYSIWYG markdown editor in your browser. Raw, rich, and dual-pane modes with Mermaid diagrams, KaTeX math, and full offline support. No signup.",
+        "applicationCategory": "Productivity",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires a modern browser with IndexedDB support",
+        "softwareVersion": "1.0.0",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "WYSIWYG markdown editing",
+          "Raw, rich, and dual-pane editing modes",
+          "Mermaid diagram rendering",
+          "KaTeX math typesetting",
+          "Syntax-highlighted code blocks",
+          "Offline-capable progressive web app",
+          "Local-first storage - no account required"
+        ]
+      }
+    </script>
     <script>
       // Apply the persisted theme before first paint to avoid a flash.
       (function () {
