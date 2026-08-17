@@ -5,6 +5,7 @@ coverage/
 playwright-report/
 test-results/
 temp/
+.firebase/
 *.local
 .DS_Store
 *.tsbuildinfo
