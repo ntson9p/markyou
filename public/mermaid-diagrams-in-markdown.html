@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>How to Add Mermaid Diagrams to Markdown — MarkYou</title>
+    <meta
+      name="description"
+      content="Write flowcharts, sequence diagrams, and Gantt charts directly in markdown using Mermaid code fences. Copyable examples, where they render, and how to fix the common syntax errors."
+    />
+    <link rel="canonical" href="https://markyou.web.app/mermaid-diagrams-in-markdown.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="MarkYou" />
+    <meta property="og:url" content="https://markyou.web.app/mermaid-diagrams-in-markdown.html" />
+    <meta property="og:title" content="How to Add Mermaid Diagrams to Markdown" />
+    <meta
+      property="og:description"
+      content="Write flowcharts, sequence diagrams, and Gantt charts directly in markdown using Mermaid code fences. Copyable examples and common fixes."
+    />
+    <meta property="og:image" content="https://markyou.web.app/og-image.png" />
+    <meta property="og:image:width" content="2400" />
+    <meta property="og:image:height" content="1260" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="How to Add Mermaid Diagrams to Markdown" />
+    <meta
+      name="twitter:description"
+      content="Flowcharts, sequence diagrams, and Gantt charts from plain text code fences."
+    />
+    <meta name="twitter:image" content="https://markyou.web.app/og-image.png" />
+
+    <link rel="stylesheet" href="/pages.css" />
+    <script>
+      // Match the app's persisted theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var t = localStorage.getItem('markyou.theme');
+          var dark =
+            t === 'dark' ||
+            ((!t || t === 'system') && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          if (t === 'light') document.documentElement.classList.add('light');
+        } catch (e) {
+          /* no-op */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="/">MarkYou</a>
+        <a class="cta" href="/">Open the editor</a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <h1>How to add Mermaid diagrams to markdown</h1>
+      <p class="lede">
+        Mermaid turns plain text into flowcharts, sequence diagrams, and timelines. Because the
+        source is text, your diagrams live in the same file as your prose and diff like any other
+        line.
+      </p>
+
+      <p>
+        The mechanism is a fenced code block with <code>mermaid</code> as the language tag. Anywhere
+        that supports it will render the block as a picture; anywhere that does not will show it as
+        code, which is ugly but never lossy.
+      </p>
+
+      <pre><code>```mermaid
+flowchart LR
+  A[Draft] --> B[Review] --> C[Ship]
+```</code></pre>
+
+      <p>
+        That is the entire integration. The rest is Mermaid's own syntax, which is worth knowing in
+        outline.
+      </p>
+
+      <h2>Flowcharts</h2>
+
+      <p>
+        The most common diagram. Declare a direction — <code>LR</code> left-to-right,
+        <code>TD</code> top-down — then describe the edges.
+      </p>
+
+      <pre><code>```mermaid
+flowchart TD
+  Start[User uploads file] --> Check{Valid format?}
+  Check -->|yes| Parse[Parse contents]
+  Check -->|no| Error[Show error]
+  Parse --> Done[Save to database]
+```</code></pre>
+
+      <p>Node shapes come from the brackets you wrap the label in:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Syntax</th>
+              <th>Shape</th>
+              <th>Typical use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>A[Text]</code></td>
+              <td>Rectangle</td>
+              <td>A step or action</td>
+            </tr>
+            <tr>
+              <td><code>A(Text)</code></td>
+              <td>Rounded</td>
+              <td>Start and end points</td>
+            </tr>
+            <tr>
+              <td><code>A{Text}</code></td>
+              <td>Diamond</td>
+              <td>A decision</td>
+            </tr>
+            <tr>
+              <td><code>A[(Text)]</code></td>
+              <td>Cylinder</td>
+              <td>A database or store</td>
+            </tr>
+            <tr>
+              <td><code>A((Text))</code></td>
+              <td>Circle</td>
+              <td>An event</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Sequence diagrams</h2>
+
+      <p>
+        For anything involving messages between parties over time — APIs, auth flows, protocols.
+      </p>
+
+      <pre><code>```mermaid
+sequenceDiagram
+  participant U as User
+  participant A as App
+  participant S as Server
+
+  U->>A: Click save
+  A->>S: PUT /document
+  S-->>A: 200 OK
+  A-->>U: "Saved"
+```</code></pre>
+
+      <p>
+        Solid arrows <code>->></code> are calls; dashed arrows <code>-->></code> are responses. That
+        one convention carries most of the meaning.
+      </p>
+
+      <h2>Other diagram types worth knowing</h2>
+
+      <ul>
+        <li>
+          <strong><code>gantt</code></strong> — project timelines with dated tasks
+        </li>
+        <li>
+          <strong><code>classDiagram</code></strong> — UML class relationships
+        </li>
+        <li>
+          <strong><code>erDiagram</code></strong> — database entities and cardinality
+        </li>
+        <li>
+          <strong><code>stateDiagram-v2</code></strong> — state machines
+        </li>
+        <li>
+          <strong><code>pie</code></strong> — simple proportion charts
+        </li>
+        <li>
+          <strong><code>gitGraph</code></strong> — branch and merge history
+        </li>
+      </ul>
+
+      <h2>Where Mermaid renders</h2>
+
+      <p>Support is broad but not universal, which is the main practical constraint on using it:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Renders Mermaid?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GitHub (issues, PRs, README)</td>
+              <td>Yes, natively</td>
+            </tr>
+            <tr>
+              <td>GitLab</td>
+              <td>Yes, natively</td>
+            </tr>
+            <tr>
+              <td>Notion, Obsidian</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>MarkYou</td>
+              <td>Yes, inline while editing</td>
+            </tr>
+            <tr>
+              <td>Plain <code>pandoc</code> or static site generators</td>
+              <td>Only with a plugin</td>
+            </tr>
+            <tr>
+              <td>Most email clients</td>
+              <td>No — export an image instead</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Errors you will hit</h2>
+
+      <p>
+        Mermaid's parser is strict and its messages are terse. Four causes account for most
+        failures:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Unquoted punctuation in labels.</strong> Brackets, colons, and quotes inside a
+          label break parsing. Wrap the text: <code>A["Save (and close)"]</code>.
+        </li>
+        <li>
+          <strong>Reserved words as node IDs.</strong> <code>end</code> is the usual culprit. Rename
+          the ID; the visible label can still say anything.
+        </li>
+        <li>
+          <strong>A missing direction.</strong> <code>flowchart</code> alone is not enough — it
+          needs <code>LR</code>, <code>TD</code>, <code>RL</code>, or <code>BT</code>.
+        </li>
+        <li>
+          <strong>Tabs for indentation.</strong> Mermaid wants spaces. An editor set to insert tabs
+          will produce diagrams that fail for no visible reason.
+        </li>
+      </ul>
+
+      <div class="note">
+        <p>
+          <strong>Iterate somewhere with live rendering.</strong> Mermaid is a language you edit by
+          feedback, not by reading the spec. Writing a diagram blind and pushing it to see whether
+          the platform renders it is a slow loop and the reason most people give up on Mermaid.
+        </p>
+      </div>
+
+      <h2>Editing diagrams inline</h2>
+
+      <p>
+        In <a href="/">MarkYou</a>, a <code>mermaid</code> fence renders as the diagram itself while
+        you write, and clicking it opens the source next to a live preview. You edit the text, watch
+        the picture update, and close — the document keeps the fence exactly as a fence, so the file
+        stays portable to GitHub or anywhere else that renders Mermaid.
+      </p>
+
+      <p>
+        It runs in the browser with no signup, so you can paste a broken diagram in and find the
+        syntax error in a few seconds rather than a few pushes.
+      </p>
+
+      <footer class="site-footer">
+        <h2>Keep reading</h2>
+        <ul>
+          <li>
+            <a href="/markdown-wysiwyg-editor.html">What makes a good markdown WYSIWYG editor</a>
+          </li>
+          <li>
+            <a href="/local-first-markdown-editor.html"
+              >What local-first actually means for a markdown editor</a
+            >
+          </li>
+        </ul>
+        <p>
+          <a href="/">MarkYou</a> — a free, local-first markdown editor that runs in the browser.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

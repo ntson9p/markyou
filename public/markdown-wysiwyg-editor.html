@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>What Makes a Good Markdown WYSIWYG Editor — MarkYou</title>
+    <meta
+      name="description"
+      content="WYSIWYG markdown editing is easy to demo and hard to get right. A practical look at round-trip fidelity, why most editors quietly rewrite your files, and what to check before you trust one."
+    />
+    <link rel="canonical" href="https://markyou.web.app/markdown-wysiwyg-editor.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="MarkYou" />
+    <meta property="og:url" content="https://markyou.web.app/markdown-wysiwyg-editor.html" />
+    <meta property="og:title" content="What Makes a Good Markdown WYSIWYG Editor" />
+    <meta
+      property="og:description"
+      content="WYSIWYG markdown editing is easy to demo and hard to get right. A practical look at round-trip fidelity and why most editors quietly rewrite your files."
+    />
+    <meta property="og:image" content="https://markyou.web.app/og-image.png" />
+    <meta property="og:image:width" content="2400" />
+    <meta property="og:image:height" content="1260" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="What Makes a Good Markdown WYSIWYG Editor" />
+    <meta
+      name="twitter:description"
+      content="Round-trip fidelity is the thing to test, and most editors fail it quietly."
+    />
+    <meta name="twitter:image" content="https://markyou.web.app/og-image.png" />
+
+    <link rel="stylesheet" href="/pages.css" />
+    <script>
+      // Match the app's persisted theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var t = localStorage.getItem('markyou.theme');
+          var dark =
+            t === 'dark' ||
+            ((!t || t === 'system') && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          if (t === 'light') document.documentElement.classList.add('light');
+        } catch (e) {
+          /* no-op */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="/">MarkYou</a>
+        <a class="cta" href="/">Open the editor</a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <h1>What makes a good markdown WYSIWYG editor</h1>
+      <p class="lede">
+        Rendering markdown as you type is the easy part. Handing back a file that still looks like
+        the one you opened is where most editors fall down.
+      </p>
+
+      <p>
+        A WYSIWYG markdown editor shows formatted text while you write instead of raw syntax. You
+        see a real heading rather than <code>## Heading</code>, a real bulleted list rather than a
+        column of hyphens. The appeal is obvious: markdown's syntax is small, but reading it while
+        also reading your own prose is a tax you pay on every sentence.
+      </p>
+
+      <p>
+        The catch is that markdown is a <em>file format</em>, not a document model. Every WYSIWYG
+        editor has to parse your text into an internal tree, let you edit that tree, and then write
+        markdown back out. That last step is where the trouble lives.
+      </p>
+
+      <h2>Round-trip fidelity is the whole game</h2>
+
+      <p>
+        Round-trip fidelity means: open a file, change nothing, save it, and get back byte-identical
+        text. It sounds like a low bar. Most editors miss it.
+      </p>
+
+      <p>The usual failure is that the serializer has opinions. You open a file that uses:</p>
+
+      <pre><code>* Item one
+* Item two</code></pre>
+
+      <p>and the editor saves it back as:</p>
+
+      <pre><code>- Item one
+- Item two</code></pre>
+
+      <p>
+        Nothing is broken. The rendered output is identical. But if that file is in version control,
+        your diff now shows every list in the document as changed, and the one real edit you made is
+        buried among a hundred cosmetic ones. Reviewers stop reading. On a shared repository this is
+        enough to get a tool banned outright.
+      </p>
+
+      <p>The same class of problem shows up in a dozen places:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>What you wrote</th>
+              <th>What a careless serializer returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>*emphasis*</code></td>
+              <td><code>_emphasis_</code></td>
+            </tr>
+            <tr>
+              <td>Setext headings underlined with <code>===</code></td>
+              <td><code>#</code> ATX headings</td>
+            </tr>
+            <tr>
+              <td>A table with aligned pipe columns</td>
+              <td>Collapsed single-space padding</td>
+            </tr>
+            <tr>
+              <td>Reference links defined at the foot</td>
+              <td>Inlined URLs, definitions dropped</td>
+            </tr>
+            <tr>
+              <td>Hard line breaks at 80 columns</td>
+              <td>One long unwrapped paragraph</td>
+            </tr>
+            <tr>
+              <td>CRLF line endings</td>
+              <td>LF, so every line reads as changed</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p>
+          <strong>How to test any editor in thirty seconds.</strong> Open a markdown file you care
+          about, type a single character, delete it, and save. Then run <code>git diff</code>. If
+          more than nothing shows up, the editor is rewriting your file. Decide whether you can live
+          with that before you write anything real in it.
+        </p>
+      </div>
+
+      <h2>Why the problem is genuinely hard</h2>
+
+      <p>
+        Markdown has no single specification. CommonMark standardised the core, but the flavours
+        people actually use — GitHub Flavored Markdown, tables, footnotes, task lists, callouts,
+        frontmatter, math — are extensions layered on top, and they interact. A tight list and a
+        loose list differ only by a blank line, and that blank line changes the generated HTML.
+        Nested list indentation can be two spaces or four, and both are valid.
+      </p>
+
+      <p>
+        So a serializer faces a choice on every node: preserve what the author wrote, or normalise
+        to one house style. Preserving is much harder, because it means the editor has to carry the
+        original formatting alongside the parsed structure and use it wherever the content was not
+        actually edited. Normalising is easy, and it is why so many editors do it.
+      </p>
+
+      <h2>Three ways to edit, and when each one helps</h2>
+
+      <p>
+        No single view is right for everything, which is why serious markdown editors offer more
+        than one:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Rich mode</strong> — full WYSIWYG. Best for drafting prose, where syntax is pure
+          friction and you want to think about sentences.
+        </li>
+        <li>
+          <strong>Raw mode</strong> — plain markdown source with syntax highlighting. Best when you
+          need exact control: fixing a table's alignment, checking what a serializer actually
+          emitted, or editing frontmatter.
+        </li>
+        <li>
+          <strong>Dual mode</strong> — source and rendered output side by side, kept in sync. Best
+          for learning the syntax, and for documents where structure matters more than flow, like
+          technical references.
+        </li>
+      </ul>
+
+      <p>
+        The important detail is that switching modes should never itself change the file. If moving
+        from rich to raw and back reformats your document, the modes are not really views of the
+        same thing.
+      </p>
+
+      <h2>A short checklist</h2>
+
+      <p>Before committing to any markdown WYSIWYG editor, check that it:</p>
+
+      <ul>
+        <li>survives the <code>git diff</code> test above</li>
+        <li>preserves your line endings rather than normalising to one kind</li>
+        <li>leaves frontmatter alone instead of reordering or reformatting keys</li>
+        <li>lets you drop into raw source when you need it</li>
+        <li>renders the extensions you actually use — tables, task lists, math, diagrams</li>
+        <li>stores files where you can reach them without exporting</li>
+      </ul>
+
+      <p>
+        MarkYou is built around the first item on that list. It offers rich, raw, and dual modes
+        over the same document, and the serializer is written to leave untouched text untouched. You
+        can
+        <a href="/">open it in the browser</a> with no signup and try the diff test on your own
+        files in under a minute.
+      </p>
+
+      <footer class="site-footer">
+        <h2>Keep reading</h2>
+        <ul>
+          <li>
+            <a href="/mermaid-diagrams-in-markdown.html">How to add Mermaid diagrams to markdown</a>
+          </li>
+          <li>
+            <a href="/local-first-markdown-editor.html"
+              >What local-first actually means for a markdown editor</a
+            >
+          </li>
+        </ul>
+        <p>
+          <a href="/">MarkYou</a> — a free, local-first markdown editor that runs in the browser.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

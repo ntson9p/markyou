@@ -1,13 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  One entry: the app is a single route (no router in the dependency tree).
+  The app itself is a single route (no router in the dependency tree); the other
+  entries are hand-written static prose pages served straight off Hosting.
   Google ignores <changefreq> and <priority>, so only <loc> and <lastmod> are
-  listed. Bump <lastmod> when the app meaningfully changes; a date that never
+  listed. Bump <lastmod> when a page meaningfully changes; a date that never
   moves teaches crawlers to stop checking.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://markyou.web.app/</loc>
+    <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://markyou.web.app/markdown-wysiwyg-editor.html</loc>
+    <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://markyou.web.app/mermaid-diagrams-in-markdown.html</loc>
+    <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://markyou.web.app/local-first-markdown-editor.html</loc>
     <lastmod>2026-08-18</lastmod>
   </url>
 </urlset>
