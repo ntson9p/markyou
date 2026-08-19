@@ -263,9 +263,10 @@ files with a requirement number attached.
   (bullet marker, emphasis marker, fence style, list indent, rule style) — but the panel only
   surfaces two of them. The wiring exists; the UI doesn't. See
   [`src/features/settings/`](src/features/settings).
-- **Pick off a known issue.** [`docs/issues/findings.md`](docs/issues/findings.md) is an
-  honest, measured list of confirmed WYSIWYG rough edges, each with a reproduction and a
-  suggested fix direction.
+- **Read the audit worklog.** [`docs/issues/findings.md`](docs/issues/findings.md) is a
+  measured pass over the WYSIWYG editor — most findings are already fixed, and it's kept
+  because the diagnoses show what "a good bug report here" looks like. Two low-priority
+  ones are still open.
 - **Improve a browser tier.** Firefox and Safari fall back to "save a copy" and base64
   images. Better fallbacks are wide open.
 

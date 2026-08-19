@@ -1,6 +1,28 @@
-# MarkYou WYSIWYG UX findings (in progress)
+# MarkYou WYSIWYG UX findings
 
-## Confirmed issues
+A worklog from a WYSIWYG audit pass, kept because the measurements and the reasoning are
+worth more than the conclusions. **Most of it is already fixed** — the status table below
+is authoritative; the numbered entries that follow are the original notes, preserved as
+written so the diagnosis stays readable next to the fix.
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | Nested-list indent costs 12px where sibling gaps cost 4px | Fixed — `9f115d0` |
+| 2 | Backspace on a solo list item needs two presses | Retracted — harness artifact |
+| 3 | Callout title offset from its icon | Fixed — `05b93a3` |
+| 4 | Tab in a code block ejects focus from the editor | Fixed — `c40e342` |
+| 5 | No way to add content after a trailing code block | Fixed — `7002274` |
+| 6 | Enter in a table cell jumps past the whole table | Fixed — `411a2a6` |
+| 7 | "Add row" and "Delete row" live on separate handles | **Open** (low) |
+| 8 | Block math input rule never fires on `$$` + space | Fixed — `7b25192` |
+| 9 | Live-typed mermaid fence renders only after a mode round-trip | **Open** (low) |
+| 10 | Toolbar-inserted image overlaps adjacent text | Retracted — mismeasured |
+| 11 | Live-typed nested list emits a spurious blank line | Fixed — `0bfa380` |
+
+Every fix above carries a regression test; see `tests/e2e/wysiwyg-*.spec.ts` and
+`src/editors/wysiwyg/plugins/`.
+
+## Findings
 
 1. **Inconsistent list-nesting vertical spacing.** When a list item indents into
    a new nested sub-list, the gap above the first nested item is 12px, but the

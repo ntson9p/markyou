@@ -30,7 +30,7 @@ whether something is a bug or deliberate, check these first:
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`docs/requirements.md`](docs/requirements.md)               | The normative spec. Numbered `FR-*` requirements, the markdown flavor table (§6), the decision log (`D1`–`D15`), performance budgets, release criteria. |
 | [`docs/implementation-plan.md`](docs/implementation-plan.md) | Architecture, the editor sync protocol, the round-trip strategy, milestones M0–M8.                                                                      |
-| [`docs/issues/findings.md`](docs/issues/findings.md)         | Confirmed rough edges with measurements and suggested fix directions.                                                                                   |
+| [`docs/issues/findings.md`](docs/issues/findings.md)         | A WYSIWYG audit worklog. Most findings are fixed; kept for the measurements and the diagnostic style.                                                   |
 
 Code comments carry requirement numbers (`FR-5.9`, `D13`) on purpose — follow them back to
 the spec when you need the reasoning.
@@ -46,7 +46,8 @@ the spec when you need the reasoning.
   font size, line numbers, default mode, draft interval, and the full markdown style
   preference set (bullet marker, emphasis marker, fence style, list indent, rule style). The
   Settings panel exposes two of them. The state is wired; the UI is missing.
-- **Take a known issue** from `docs/issues/findings.md`.
+- **Take one of the two open findings** in `docs/issues/findings.md` (both low priority — the
+  status table at the top of that file says which).
 - **Improve the Firefox/Safari fallbacks.** Those browsers get "save a copy" and base64
   images instead of in-place save and an `assets/` folder. There is room to do better.
 
