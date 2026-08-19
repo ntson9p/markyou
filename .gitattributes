@@ -1,0 +1,25 @@
+# Normalize line endings so a clone behaves identically on every platform.
+#
+# Without this, Git's Windows default (core.autocrlf=true) checks text files
+# out as CRLF. The round-trip fixtures are byte-significant markdown — a soft
+# break is a lone LF — so a CRLF checkout fails nine tests in
+# tests/roundtrip/ that pass everywhere else. Pinning the working tree to LF
+# keeps the corpus meaningful and the test suite green on Windows too.
+* text=auto eol=lf
+
+# Binary assets: never touch, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+
+# Generated; collapse in review and keep out of language stats.
+package-lock.json -diff linguist-generated
+docs/screenshots/* linguist-generated
