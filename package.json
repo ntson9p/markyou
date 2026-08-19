@@ -2,6 +2,29 @@
   "name": "markyou",
   "private": true,
   "version": "1.0.0",
+  "description": "Local-first WYSIWYG markdown editor — raw source, rich text, or both side by side, straight from the files on your disk.",
+  "license": "MIT",
+  "author": "Nguyen Truong Son",
+  "homepage": "https://markyou.web.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ntson9p/markyou.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ntson9p/markyou/issues"
+  },
+  "keywords": [
+    "markdown",
+    "editor",
+    "wysiwyg",
+    "local-first",
+    "offline",
+    "pwa",
+    "commonmark",
+    "gfm",
+    "mermaid",
+    "katex"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +39,7 @@
     "e2e": "playwright test",
     "bundle-size": "node scripts/check-bundle-size.mjs",
     "icons": "node scripts/generate-icons.mjs",
+    "screenshots": "node scripts/screenshots/capture.mjs",
     "prepare": "husky"
   },
   "dependencies": {
