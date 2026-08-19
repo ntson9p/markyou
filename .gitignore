@@ -9,3 +9,11 @@ temp/
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# Never commit credentials. Nothing in this project needs them today, but a
+# public repo is the wrong place to find out that something started to.
+.env
+.env.*
+!.env.example
+*.pem
+*.key

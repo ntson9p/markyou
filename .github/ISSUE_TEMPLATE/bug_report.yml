@@ -1,0 +1,72 @@
+name: Bug report
+description: Something in the editor behaves wrongly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The single most useful thing you can include is the
+        **markdown document that triggers it** — edge cases in the document are where
+        this app usually goes wrong.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: |
+        1. Opened a file with a nested task list
+        2. Switched to WYSIWYG mode
+        3. Expected the indentation to stay; the second level flattened instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: document
+    attributes:
+      label: The document
+      description: >
+        The smallest markdown that still reproduces it. Paste it here, or attach the
+        `.md` file by dragging it into this box.
+      render: markdown
+    validations:
+      required: false
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode
+      options:
+        - Raw
+        - WYSIWYG
+        - Dual
+        - Not mode-specific
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 141 on Windows 11
+    validations:
+      required: true
+
+  - type: dropdown
+    id: other-browser
+    attributes:
+      label: Does it reproduce in another browser?
+      options:
+        - Haven't tried
+        - 'Yes'
+        - 'No — only the one above'
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Console errors, screenshots, a screen recording — whatever you have.
+    validations:
+      required: false

@@ -1,0 +1,69 @@
+name: Markdown came back wrong
+description: A document changed in a way it shouldn't have
+labels: [bug, round-trip]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the highest-value bug class in the project, so it gets its own form.
+
+        Two different promises apply, and it helps to know which one you think was broken:
+
+        - **Raw mode is byte-faithful.** Text you didn't touch must come back unchanged.
+          Any deviation is a bug.
+        - **WYSIWYG edits normalize style.** Marker characters and spacing may change
+          (`*` → `-`, blank-line spacing). That part is by design and configurable. But
+          content, structure and meaning must never change — and syntax the rich editor
+          can't represent must round-trip verbatim.
+
+        If you can, consider opening a pull request that adds your document to
+        `tests/roundtrip/fixtures/` instead of (or as well as) this issue. The corpus picks
+        new files up automatically, and a failing fixture is a welcome PR on its own — you
+        don't have to fix it.
+
+  - type: textarea
+    id: before
+    attributes:
+      label: Before
+      description: The markdown you started with.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: after
+    attributes:
+      label: After
+      description: The markdown you got back.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: Which part of the change is wrong, and why you'd call it wrong.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: path
+    attributes:
+      label: What did you do in between?
+      options:
+        - Edited in raw mode only
+        - Edited in WYSIWYG mode
+        - Edited in dual mode
+        - Just switched modes without editing
+        - Only opened and saved
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 148 on macOS 15
+    validations:
+      required: true
