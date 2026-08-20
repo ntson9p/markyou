@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Menu } from 'lucide-react';
+import { ArrowUpRight, Menu } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { notify } from '@/app/store/notices';
+import { REPO_URL } from '@/lib/links';
 import { useUiStore } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 import type { RecentRecord } from '@/core/storage/db';
@@ -104,6 +105,23 @@ export function MainMenu() {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setActivePanel('settings')}>
           Settings… <DropdownMenuShortcut>Ctrl+,</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Its own group because it is the one item that leaves the app. A
+            real anchor rather than an onSelect handler, so middle-click,
+            Ctrl+click and "copy link address" all behave — the ways someone
+            actually opens a repo they mean to come back to. */}
+        <DropdownMenuItem asChild>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="menu-source"
+            className="cursor-pointer"
+          >
+            Source on GitHub
+            <ArrowUpRight className="ml-auto size-3.5 text-muted-foreground" aria-hidden />
+          </a>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -2,6 +2,7 @@ import { act, render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from '@/app/AppShell';
+import { REPO_URL } from '@/lib/links';
 import { useUiStore } from '@/app/store/ui';
 import { useDocStore } from '@/core/document/store';
 
@@ -57,6 +58,27 @@ describe('AppShell', () => {
     expect(useUiStore.getState().mode).toBe('raw');
     fireEvent.keyDown(window, { code: 'Digit3', ctrlKey: true, shiftKey: true });
     expect(useUiStore.getState().mode).toBe('dual');
+  });
+
+  // The repository link is reachable from both shell states: the welcome
+  // footer for a first visit, the app menu once a document is open.
+  it('links to the source repository from the welcome screen', () => {
+    render(<AppShell />);
+    const link = screen.getByTestId('welcome-source');
+    expect(link).toHaveAttribute('href', REPO_URL);
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('links to the source repository from the app menu', async () => {
+    render(<AppShell />);
+    fireEvent.click(screen.getByTestId('welcome-new'));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Open menu' }), {
+      button: 0,
+      ctrlKey: false,
+      pointerType: 'mouse',
+    });
+    const link = await screen.findByTestId('menu-source');
+    expect(link).toHaveAttribute('href', REPO_URL);
   });
 
   it('splits frontmatter off the body when the full text is edited', () => {

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 
 import { useUiStore } from '@/app/store/ui';
+import { GitHubMark } from '@/components/GitHubMark';
+import { REPO_URL } from '@/lib/links';
 import { cn } from '@/lib/utils';
 import type { DraftRecord, RecentRecord } from '@/core/storage/db';
 import { newDocument, openDocument, openRecent } from '@/features/files/actions';
@@ -285,6 +287,19 @@ export function WelcomeScreen() {
             Keyboard shortcuts
             <Keys combo="Ctrl+/" />
           </button>
+          {/* Last in the row, and deliberately in the same breath as the
+              privacy claim above: "nothing is uploaded" is a promise, and the
+              source is the only thing that turns it into something checkable. */}
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="welcome-source"
+            className="flex items-center gap-1.5 rounded-sm underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/60"
+          >
+            <GitHubMark className="size-3.5 shrink-0" />
+            Source on GitHub
+          </a>
         </div>
       </div>
 
